@@ -1,0 +1,114 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>ChillVibes sim</title></head>
+<body><pre id="out">running</pre>
+<script src="../game/config.js"></script>
+<script src="../game/world.js"></script>
+<script src="../game/game.js"></script>
+<script>
+const CV = globalThis.CV, { K, CFG, N8 } = CV;
+const lines = [];
+const log = s => lines.push(s);
+const params = new URLSearchParams(location.search);
+for (const [k, v] of params) if (k in CFG) CFG[k] = +v;
+
+function assert(c, m) { if (!c) log('ASSERT FAILED: ' + m); }
+
+// Bot: uses everything sensibly. mode: 'idle' (only ends turns) or 'bot'
+function play(seed, mode, maxTurns) {
+  const g = new CV.Game(seed);
+  let firstLoss = null;
+  for (let i = 0; i < maxTurns && !g.over; i++) {
+    if (mode === 'bot') {
+      // activate sites: prefer bundle when poor, cleanse when blight exists, else city/explore/features
+      for (const [key] of g.sites) {
+        if (g.usedSites.has(key)) continue;
+        const offer = g.siteOffer(key);
+        const order = g.blight.size ? ['cleanse', 'city', 'explore', 'features', 'bundle'] : ['city', 'explore', 'features', 'bundle', 'cleanse'];
+        for (const id of order) if (g.activateSite(key, id).ok) break;
+      }
+      // projects
+      while (g.projectAvailable()) {
+        const o = g.projectOffer().filter(p => g.relicsOk(p.relic));
+        if (!o.length || !g.chooseProject(o[Math.floor(g.rng() * o.length)].id).ok) break;
+      }
+      // found cities greedily
+      for (let n = 0; n < 5; n++) {
+        let best = null, bs = -1;
+        for (const k of g.known) {
+          const x = Math.round(k / 131072), y = k - x * 131072; // decode
+          // k = x*131072+y with |y|<65536 -> recover
+          let xx = Math.floor((k + 65536) / 131072), yy = k - xx * 131072;
+          if (g.placeProblem(xx, yy)) continue;
+          let score = 0;
+          for (let dx = -2; dx <= 2; dx++) for (let dy = -2; dy <= 2; dy++) {
+            if (Math.abs(dx) + Math.abs(dy) > 3) continue;
+            const kk = K(xx + dx, yy + dy);
+            if (!g.claimed.has(kk) && !g.blight.has(kk)) score++;
+          }
+          score -= Math.max(Math.abs(xx), Math.abs(yy)) * 0.05;
+          if (score > bs) { bs = score; best = [xx, yy]; }
+        }
+        if (!best || bs < 12 || !g.canFound(...best).ok) break;
+        g.found(...best);
+      }
+      // explore cheapest frontier tile
+      let cand = null, cc = 1e9; const seen = new Set();
+      for (const k of g.known) {
+        const kx = Math.floor((k + 65536) / 131072), ky = k - kx * 131072;
+        for (const [dx, dy] of N8) {
+          const x = kx + dx, y = ky + dy, kk = K(x, y);
+          if (g.known.has(kk) || seen.has(kk)) continue; seen.add(kk);
+          const c = g.canExplore(x, y);
+          if (c.ok && c.cost + Math.random() * 0.5 < cc) { cc = c.cost; cand = [x, y]; }
+        }
+      }
+      if (cand) g.explore(...cand);
+    }
+    const before = g.cities.length;
+    g.endTurn();
+    if (!firstLoss && g.cities.length < before) firstLoss = g.turn;
+  }
+  return g;
+}
+
+try {
+  // world sanity
+  for (const seed of [1, 2, 3, 42, 777]) {
+    const w = new CV.World(seed);
+    assert(w.blob.size >= 50 && w.blob.size <= 80, 'blob size ' + w.blob.size + ' seed ' + seed);
+    let desert = 0;
+    for (const k of w.blob) { const x = Math.floor((k + 65536) / 131072), y = k - x * 131072; if (w.tile(x, y).type === 'desert' || w.tile(x, y).type === 'ocean') desert++; }
+    assert(desert === 0, 'blob has desert/ocean');
+    const t0 = w.tile(0, 0);
+    assert(['forest', 'plains', 'mountains'].includes(t0.type), 'start type');
+    let land = 0, n = 0; const types = {};
+    for (let x = -60; x < 60; x++) for (let y = -60; y < 60; y++) { const t = w.tile(x, y); n++; types[t.type] = (types[t.type] || 0) + 1; }
+    log(`seed ${seed}: blob ${w.blob.size}, start ${t0.type}, mix ${JSON.stringify(types)}`);
+  }
+  // basic rule checks
+  {
+    const g = new CV.Game(5);
+    assert(g.cities.length === 1 && g.claimed.size === 21, 'start city claims 21, got ' + g.claimed.size);
+    assert(g.known.size === 21, 'start reveals footprint: ' + g.known.size);
+    const inc = g.income();
+    log('start income ' + JSON.stringify(inc));
+    assert(!g.canExplore(0, 0).ok, 'cannot explore known tile');
+    const e = [...Array(5)].map((_, i) => g.canExplore(3, i - 2));
+    log('explore (3,*) -> ' + JSON.stringify(e.map(x => x.reason || 'ok')));
+    g.taken.wider = 1; g.claimAll(); assert(g.claimed.size === 45, 'wider claims 45, got ' + g.claimed.size);
+  }
+  // idle: how fast does blight kill a lone city?
+  for (const seed of [1, 2, 3]) {
+    const g = play(seed, 'idle', 400);
+    log(`idle seed ${seed}: ${g.over ? (g.over.won ? 'WON' : 'lost at turn ' + g.over.turn) : 'survived 400'} blight=${g.blight.size} pustules=${g.pustuleCount()}`);
+  }
+  // bot runs
+  for (const seed of [1, 2, 3, 4]) {
+    const t = performance.now();
+    const g = play(seed, 'bot', 300);
+    const p = g.progress();
+    log(`bot seed ${seed}: ${g.over ? (g.over.won ? 'WON(' + g.over.how + ') t' + g.over.turn : 'lost t' + g.over.turn) : 'alive t' + g.turn} cities ${p.cities} sites ${p.sites} proj ${p.projects} known ${g.known.size} blight ${g.blight.size} res ${JSON.stringify(g.res)} ${(performance.now() - t) | 0}ms`);
+  }
+} catch (e) { log('EXCEPTION ' + e.stack); }
+document.getElementById('out').textContent = 'DONE\n' + lines.join('\n');
+</script></body></html>

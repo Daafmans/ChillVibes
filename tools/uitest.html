@@ -1,0 +1,58 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>ChillVibes UI smoke test</title>
+<link rel="stylesheet" href="../game/style.css">
+</head>
+<body>
+<div id="app">
+  <div id="top"></div>
+  <div id="mapwrap"><canvas id="map"></canvas><div id="toast"></div></div>
+  <div id="panel"><div id="info"></div><div id="projects"></div></div>
+</div>
+<div id="modal" hidden></div>
+<pre id="res"></pre>
+<script src="../game/config.js"></script>
+<script src="../game/world.js"></script>
+<script src="../game/game.js"></script>
+<script src="../game/ui.js"></script>
+<script>
+(function () {
+  const out = [];
+  window.onerror = (m, s, l) => out.push('ERR ' + m + ' @' + l);
+  const CV = globalThis.CV;
+  const click = sel => { const b = document.querySelector(sel); if (b && !b.disabled) { b.click(); return true; } return false; };
+  const key = k => document.dispatchEvent(new KeyboardEvent('keydown', { key: k }));
+  try {
+    for (let t = 0; t < 120; t++) {
+      // wander: pan in a slowly rotating direction so explore/found hit varied tiles
+      const g = CV.ui.game;
+      // pick the cheapest legal explore target and the best city spot, jump the camera there, press the real buttons
+      let ex = null, ec = 1e9;
+      for (const k of g.known) {
+        const kx = Math.floor((k + 65536) / 131072), ky = k - kx * 131072;
+        for (const [dx, dy] of CV.N8) {
+          const c = g.canExplore(kx + dx, ky + dy);
+          if (c.ok && c.cost < ec) { ec = c.cost; ex = [kx + dx, ky + dy]; }
+        }
+      }
+      if (ex) { CV.ui.goto(ex[0], ex[1]); click('[data-act=explore]'); }
+      click('[data-pick]:not([disabled])'); click('[data-act=close]');
+      for (const k of g.known) {
+        const kx = Math.floor((k + 65536) / 131072), ky = k - kx * 131072;
+        if (g.canFound(kx, ky).ok && Math.max(Math.abs(kx), Math.abs(ky)) >= 5) { CV.ui.goto(kx, ky); click('[data-act=found]'); break; }
+      }
+      for (const [k] of g.sites) if (!g.usedSites.has(k)) {
+        const s = g.sites.get(k); CV.ui.goto(s.x, s.y); click('[data-act=site]');
+        click('[data-opt=bundle]'); click('[data-act=close]');
+      }
+      click('[data-act=end]');
+    }
+    const g = CV.ui.game;
+    out.push('turn ' + g.turn + ' cities ' + g.cities.length + ' known ' + g.known.size + ' proj ' + g.projectCount + ' over ' + JSON.stringify(g.over));
+    out.push('top: ' + document.getElementById('top').innerText.replace(/\n/g, ' '));
+    out.push('info: ' + document.getElementById('info').innerText.replace(/\n/g, ' | '));
+    out.push('toast: ' + document.getElementById('toast').innerText.replace(/\n/g, ' | '));
+  } catch (e) { out.push('EXC ' + e.stack); }
+  document.getElementById('res').textContent = 'UIDONE\n' + out.join('\n');
+})();
+</script>
+</body></html>

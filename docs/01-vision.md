@@ -1,0 +1,30 @@
+# ChillVibes: Vision
+
+*Status: draft v0.2. Rewritten around the designer's detailed brief. Gaps and guesses are marked **[ASSUMPTION]** and collected in `04-open-questions.md`.*
+
+## Pitch
+A single-player, turn-based empire builder, Civilization reduced to its core. You start with one revealed square of an unknown world. Each turn you choose where to **explore** and where to **expand**, while **blight** spreads across the land and slowly squeezes you. You win by building enough cities, finding every ancient site, or finishing enough projects, before blight takes your last city.
+
+## Pillars
+1. **Empire building is the game.** No units, no combat, no diplomacy. You work with a map, three resources and a project tree.
+2. **Two questions drive every turn.**
+   - *Where do I explore next?*
+   - *Where do I expand next?*
+3. **Exploration is the central verb.** It costs a resource, its price grows with distance, and projects change *how* you explore.
+4. **Projects change the rules, not the numbers.** A project that gives +10% production is not allowed. A project that lets you explore without an adjacent known tile is.
+5. **Pressure through blight, not opponents.** The threat is a spreading environmental clock. It forces you to move outward instead of sitting still.
+6. **Short and readable.** One map view and one contextual panel. Three resources.
+
+## Target experience
+- **Early:** Almost everything is dark. Each reveal feels like a small discovery and each city is a bet.
+- **Middle:** Blight appears. You learn to read it, to guess which patches are pustules, and to push out before it reaches you.
+- **Late:** Projects have opened up the rules and you race toward one of the win conditions as blight closes in.
+
+## Non-goals (v1)
+- Multiplayer or AI empires
+- Units, movement and combat
+- Diplomacy, trade, tech trees measured in percentages
+- Per-city resource management (resources are global)
+
+## Superseded from v0.1
+Removed: scouts, settlers, guardians, rivals, barbarians, science and culture, and score-at-turn-limit. These are replaced by the exploration action, instant city building, blight, and win conditions.
