@@ -94,7 +94,7 @@
     const ex = g.canExplore(x, y), fd = g.canFound(x, y);
     const siteReady = g.sites.has(k) && !g.usedSites.has(k);
     let btns = '';
-    btns += `<button class="primary" data-act="explore" ${ex.ok ? '' : 'disabled'} title="${ex.ok ? 'Exploring ends the turn' : ex.reason}">Explore &amp; end turn (E) · ${ICON.wealth}${g.res.wealth}${ex.bonus ? ` → +${ex.bonus} tile${ex.bonus > 1 ? 's' : ''}` : ''}</button>`;
+    btns += `<button class="primary" data-act="explore" ${ex.ok ? '' : 'disabled'} title="${ex.ok ? 'Exploring ends the turn' : ex.reason}">Explore (E) · ${ICON.wealth}${g.res.wealth}${ex.bonus ? ` → +${ex.bonus} tile${ex.bonus > 1 ? 's' : ''}` : ''}</button>`;
     btns += `<button data-act="found" ${fd.ok ? '' : 'disabled'} title="${fd.ok ? '' : fd.reason}">Found city (F) · ${ICON.food}${fd.cost}</button>`;
     if (siteReady) btns += `<button class="primary" data-act="site">Activate site (A)</button>`;
     const why = [];
