@@ -45,6 +45,14 @@
       if (!ex) CV.ui.game.endTurn(); // no legal explore: nudge the sim forward so the test keeps progressing
     }
     const g = CV.ui.game;
+    // options menu: open, edit, save, revert
+    click('[data-act=options]');
+    const inp = document.querySelector('input[data-cfg=cityBaseCost]');
+    out.push('options inputs: ' + document.querySelectorAll('input[data-cfg]').length + ' of ' + Object.keys(CV.CFG_DEFAULTS).length);
+    inp.value = '99'; click('[data-act=saveopts]');
+    out.push('after save cityBaseCost=' + CV.CFG.cityBaseCost + ' stored=' + localStorage.getItem('chillvibes.options.v1'));
+    click('[data-act=options]'); click('[data-act=revert]');
+    out.push('after revert cityBaseCost=' + CV.CFG.cityBaseCost + ' stored=' + localStorage.getItem('chillvibes.options.v1'));
     out.push('turn ' + g.turn + ' cities ' + g.cities.length + ' known ' + g.known.size + ' proj ' + g.projectCount + ' over ' + JSON.stringify(g.over));
     out.push('top: ' + document.getElementById('top').innerText.replace(/\n/g, ' '));
     out.push('info: ' + document.getElementById('info').innerText.replace(/\n/g, ' | '));

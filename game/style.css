@@ -56,3 +56,8 @@ button.pulse { animation: pulse 1.4s infinite; }
 .card .cat { font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: .06em; }
 .card .need { margin-top: 6px; font-size: 12px; }
 .ok { color: var(--accent); }
+.optgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px 24px; margin: 12px 0; }
+.optgroup h4 { margin: 0 0 4px; font-size: 13px; color: var(--dim); text-transform: uppercase; letter-spacing: .06em; }
+.opt { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 2px 6px; border-radius: 6px; }
+.opt.changed { background: var(--accent-bg); }
+.opt input { width: 90px; font: inherit; color: var(--text); background: var(--panel2); border: 1px solid var(--line); border-radius: 6px; padding: 3px 6px; }

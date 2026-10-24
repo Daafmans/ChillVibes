@@ -16,8 +16,8 @@
     const d = pool[Math.min(pool.length - 1, Math.floor(u * pool.length))];
     const f = { id: d.id, name: d.name, kind: d.kind };
     if (d.kind === 'relic') f.color = d.color;
-    else if (d.kind === 'tile') { f.res = d.res; f.amount = Math.max(1, Math.round(2 * scale)); }
-    else f.amount = Math.max(1, Math.round(1 * scale));
+    else if (d.kind === 'tile') { f.res = d.res; f.amount = Math.max(1, Math.round(CFG.tileFeatureAmount * scale)); }
+    else f.amount = Math.max(1, Math.round(CFG.cityFeatureAmount * scale));
     return f;
   };
 
@@ -39,7 +39,7 @@
     // Starting landmass: 50-80 connected land tiles around (0,0), never desert.
     makeBlob() {
       const rng = CV.mulberry32(this.seed * 977 + 1);
-      const target = 50 + Math.floor(rng() * 31);
+      const target = CFG.blobMin + Math.floor(rng() * CFG.blobVariance);
       const members = [[0, 0]];
       this.blob = new Set([K(0, 0)]);
       const four = [[1, 0], [-1, 0], [0, 1], [0, -1]];
@@ -51,7 +51,7 @@
         if (this.blob.has(k)) continue;
         let n = 0;
         for (const [ax, ay] of four) if (this.blob.has(K(x + ax, y + ay))) n++;
-        if (n < 2 && rng() > 0.3) continue;
+        if (n < 2 && rng() > CFG.blobFillChance) continue;
         this.blob.add(k); members.push([x, y]);
       }
       this.ring = new Set();
@@ -68,22 +68,22 @@
     }
     landType(x, y) {
       const m = this.noise(x, y, 7, 4);
-      return m < 0.32 ? 'mountains' : m < 0.66 ? 'forest' : 'plains';
+      return m < CFG.mountainBelow ? 'mountains' : m < CFG.forestBelow ? 'forest' : 'plains';
     }
     gen(x, y, k) {
       let type;
       if (this.blob.has(k)) type = this.landType(x, y);
       else {
         const e = 0.6 * this.noise(x, y, 16, 1) + 0.4 * this.noise(x, y, 6, 2);
-        let land = e >= 0.40;
-        if (!land && this.ring.has(k) && this.rnd(x, y, 3) < 0.5) land = true;
+        let land = e >= CFG.landThreshold;
+        if (!land && this.ring.has(k) && this.rnd(x, y, 3) < CFG.ringLandChance) land = true;
         if (!land) type = 'ocean';
-        else if (this.noise(x, y, 20, 5) > 0.70 && !this.ring.has(k)) type = 'desert';
+        else if (this.noise(x, y, 20, 5) > CFG.desertThreshold && !this.ring.has(k)) type = 'desert';
         else type = this.landType(x, y);
       }
       let feature = null, site = false;
-      if (CV.cheb(x, y, 0, 0) >= 2) {
-        if (type !== 'ocean' && CV.cheb(x, y, 0, 0) >= 3 && this.rnd(x, y, 12) < CFG.siteChance) site = true;
+      if (CV.cheb(x, y, 0, 0) >= CFG.startSafeRadius) {
+        if (type !== 'ocean' && CV.cheb(x, y, 0, 0) >= CFG.siteMinDistance && this.rnd(x, y, 12) < CFG.siteChance) site = true;
         else if (this.rnd(x, y, 10) < CFG.featureChance) feature = CV.makeFeature(this.rnd(x, y, 11), type, 1);
       }
       return { x, y, type, feature, site };

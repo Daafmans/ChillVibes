@@ -50,6 +50,7 @@
       `<span class="pill turn">Turn <b>${g.turn}</b></span>` +
       RES.map(r => `<span class="pill">${ICON[r]} <b>${g.res[r]}</b> <span class="dim">+${inc[r]}</span>${r === 'materials' ? ` <span class="dim ${mat}">/ ${g.threshold}</span>` : ''}</span>`).join('') +
       `<span class="grow"></span>` +
+      `<button data-act="options" title="Tweak gameplay values">Options</button>` +
       `<button data-act="newgame" title="Abandon this world and start a new one">New game</button>` +
       `<span class="pill dim">Cities <b>${p.cities}/${CFG.winCities}</b></span>` +
       `<span class="pill dim">Sites <b>${p.sites}/${CFG.winSites}</b></span>` +
@@ -171,6 +172,71 @@
         : `<button data-act="defer" data-key="${key}" title="Activate now and pick the benefit later, from anywhere">Choose later</button>`}</div></div>`, 'site');
   }
 
+  // ---------- options ----------
+  const OPTIONS_KEY = 'chillvibes.options.v1';
+  // [title, keys]. Keys of CFG missing here still show up under "Other". World-generation keys need a new game.
+  const OPTION_GROUPS = [
+    ['Start', ['startFood', 'startMaterials', 'startWealth']],
+    ['Cities', ['cityBaseCost', 'cityCostGrowth', 'cityClaimRadius']],
+    ['Exploring', ['exploreWealthPerTile', 'openFrontierRadius']],
+    ['Fog glimpses', ['glimpseBase', 'glimpseStep', 'glimpseMax', 'blightSightRange']],
+    ['World generation (new game)', ['blobMin', 'blobVariance', 'blobFillChance', 'startSafeRadius', 'siteMinDistance',
+      'siteChance', 'featureChance', 'landThreshold', 'ringLandChance', 'desertThreshold', 'mountainBelow', 'forestBelow']],
+    ['Special features', ['tileFeatureAmount', 'cityFeatureAmount']],
+    ['Projects', ['projectBase', 'projectGrowth', 'projectOfferSize', 'widerBorderBonus', 'legacyPerDistance', 'tradeBonus', 'gloriousBonus', 'gloriousRadius']],
+    ['Ancient sites', ['siteOptionCount', 'siteRelicChance', 'siteRelicDoubleChance', 'siteBundleMin', 'siteBundleVariance',
+      'siteExploreRadius', 'siteFeatureCount', 'siteFeatureRadius', 'cleanseRadius']],
+    ['Blight', ['blightStart', 'blightEvery', 'blightSpawnRadius', 'blightSpread']],
+    ['Victory', ['winCities', 'winSites', 'winProjects']],
+  ];
+  const WORLD_KEYS = new Set(OPTION_GROUPS[4][1]);
+  const optLabel = k => cap(k.replace(/([A-Z])/g, ' $1').toLowerCase());
+
+  function saveOptions() {
+    const diff = {};
+    for (const k in CV.CFG_DEFAULTS) if (CFG[k] !== CV.CFG_DEFAULTS[k]) diff[k] = CFG[k];
+    try { localStorage.setItem(OPTIONS_KEY, JSON.stringify(diff)); } catch (e) { /* storage unavailable */ }
+  }
+  function loadOptions() {
+    try {
+      const o = JSON.parse(localStorage.getItem(OPTIONS_KEY)) || {};
+      for (const k in o) if (k in CV.CFG_DEFAULTS && Number.isFinite(o[k])) CFG[k] = o[k];
+    } catch (e) { /* ignore a corrupt value */ }
+  }
+  function openOptions(note) {
+    const known = new Set(OPTION_GROUPS.flatMap(([, ks]) => ks));
+    const groups = OPTION_GROUPS.concat([['Other', Object.keys(CV.CFG_DEFAULTS).filter(k => !known.has(k))]]).filter(([, ks]) => ks.length);
+    const body = groups.map(([title, keys]) => `<div class="optgroup"><h4>${title}</h4>${keys.map(k =>
+      `<label class="opt${CFG[k] !== CV.CFG_DEFAULTS[k] ? ' changed' : ''}" title="Default: ${CV.CFG_DEFAULTS[k]}"><span>${optLabel(k)}</span>` +
+      `<input type="number" step="any" min="0" data-cfg="${k}" value="${CFG[k]}"></label>`).join('')}</div>`).join('');
+    openModal(`<div class="sheet"><h3>Options</h3>
+      <div class="dim">Changes to values are applied to the running game and kept for next time. Highlighted values differ from the default.${note ? ` <span class="warn">${note}</span>` : ''}</div>
+      <div class="optgrid">${body}</div>
+      <div class="btns"><button class="primary" data-act="saveopts">Save</button>
+      <button data-act="revert" title="Reset every value to its default">Revert to default</button>
+      <button data-act="close">Cancel</button></div></div>`, 'options');
+  }
+  // Applies a {key: number} map. World-generation changes only make sense in a fresh world, so they ask first.
+  function applyOptions(vals) {
+    const changed = Object.keys(vals).filter(k => CFG[k] !== vals[k]);
+    const worldChanged = changed.some(k => WORLD_KEYS.has(k));
+    let startNew = false;
+    if (worldChanged) {
+      startNew = g.over || confirm('World generation values changed. Start a new game to use them?\n\nOK: new game. Cancel: keep this world and leave those values unchanged.');
+    }
+    for (const k of changed) if (startNew || !WORLD_KEYS.has(k)) CFG[k] = vals[k];
+    saveOptions();
+    if (startNew) newGame(randomSeed()); else { closeModal(); refresh(); }
+  }
+  function saveOptionsForm() {
+    const vals = {};
+    for (const inp of el('modal').querySelectorAll('input[data-cfg]')) {
+      const v = parseFloat(inp.value);
+      vals[inp.dataset.cfg] = Number.isFinite(v) && v >= 0 ? v : CFG[inp.dataset.cfg];
+    }
+    applyOptions(vals);
+  }
+
   function showOver() {
     const o = g.over;
     const how = { cities: 'built enough cities', sites: 'found enough ancient sites', projects: 'finished enough projects' };
@@ -191,6 +257,9 @@
     else if (a === 'found') doFound();
     else if (a === 'site') doSite();
     else if (a === 'defer') { if (g.deferSite(+b.dataset.key).ok) { closeModal(); refresh(); } }
+    else if (a === 'options') openOptions();
+    else if (a === 'saveopts') saveOptionsForm();
+    else if (a === 'revert') applyOptions(Object.assign({}, CV.CFG_DEFAULTS));
     else if (a === 'projects') openProjects();
     else if (a === 'close') closeModal();
     else if (a === 'restart') newGame(randomSeed());
@@ -375,6 +444,7 @@
   CV.ui = { newGame, goto, get game() { return g; } };
   const qs = new URLSearchParams(location.search);
   resize();
+  loadOptions();
   const seedParam = parseInt(qs.get('seed'), 10);
   const saved = seedParam ? null : load();
   newGame(seedParam || randomSeed(), saved);

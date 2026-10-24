@@ -82,7 +82,7 @@
     range(id) {
       const n = this.taken[id] || 0;
       if (!n) return -1;
-      if (id === 'blightsight') return 5;
+      if (id === 'blightsight') return CFG.blightSightRange;
       return Math.min(CFG.glimpseMax, CFG.glimpseBase + CFG.glimpseStep * (n - 1));
     }
     // What the player may see of a hidden tile: null if nothing.
@@ -95,7 +95,7 @@
     }
 
     // ---------- cities ----------
-    borderRadius() { return 2 + (this.taken.wider || 0); }
+    borderRadius() { return CFG.cityClaimRadius + CFG.widerBorderBonus * (this.taken.wider || 0); }
     claimAll() {
       this.claimed.clear(); this.cityTiles = new Map();
       const r = this.borderRadius();
@@ -231,10 +231,10 @@
             if (o !== undefined && o !== c.id) { touch = true; break; }
           }
         }
-        if (trade && touch) RES.forEach(r => tot[r] += trade);
+        if (trade && touch) RES.forEach(r => tot[r] += CFG.tradeBonus * trade);
         if (glor && i === 0) {
-          const n = this.cities.filter(o => o !== c && cheb(o.x, o.y, c.x, c.y) <= 10).length;
-          RES.forEach(r => tot[r] += 3 * glor * n);
+          const n = this.cities.filter(o => o !== c && cheb(o.x, o.y, c.x, c.y) <= CFG.gloriousRadius).length;
+          RES.forEach(r => tot[r] += CFG.gloriousBonus * glor * n);
         }
       });
       return tot;
@@ -261,13 +261,13 @@
         // at most one offered project may require relics
         const pick = [];
         for (const p of pool) {
-          if (pick.length === 3) break;
+          if (pick.length === CFG.projectOfferSize) break;
           if (p.relic && pick.some(q => q.relic)) continue;
           pick.push(p);
         }
         if (pick.length && !pick.some(p => this.relicsOk(p.relic))) {
           const free = pool.find(p => !p.relic && !pick.includes(p));
-          if (free) { if (pick.length < 3) pick.push(free); else pick[2] = free; }
+          if (free) { if (pick.length < CFG.projectOfferSize) pick.push(free); else pick[pick.length - 1] = free; }
         }
         this.projectOfferIds = pick.map(p => p.id);
       }
@@ -289,7 +289,7 @@
     }
 
     // ---------- ancient sites ----------
-    legacyScale(x, y) { return 1 + (this.taken.legacy || 0) * cheb(x, y, 0, 0) * 0.05; }
+    legacyScale(x, y) { return 1 + (this.taken.legacy || 0) * cheb(x, y, 0, 0) * CFG.legacyPerDistance; }
     siteOffer(key) {
       let o = this.siteOffers.get(key);
       if (o) return o;
@@ -297,10 +297,10 @@
       const rng = CV.mulberry32(CV.hash3(s.x, s.y, 99) * 1e9 | 0);
       const kinds = SITE_KINDS.slice();
       for (let i = kinds.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [kinds[i], kinds[j]] = [kinds[j], kinds[i]]; }
-      const opts = kinds.slice(0, 3).map(id => ({ id, req: null }));
-      if (rng() < 0.7) opts[Math.floor(rng() * 3)].req = { n: rng() < 0.3 ? 2 : 1, color: COLORS[Math.floor(rng() * 3)] };
+      const opts = kinds.slice(0, CFG.siteOptionCount).map(id => ({ id, req: null }));
+      if (rng() < CFG.siteRelicChance) opts[Math.floor(rng() * opts.length)].req = { n: rng() < CFG.siteRelicDoubleChance ? 2 : 1, color: COLORS[Math.floor(rng() * 3)] };
       const sc = this.legacyScale(s.x, s.y);
-      const base = () => Math.round((8 + rng() * 8) * sc);
+      const base = () => Math.round((CFG.siteBundleMin + rng() * CFG.siteBundleVariance) * sc);
       opts.push({ id: 'bundle', req: null, bundle: { food: base(), materials: base(), wealth: base() } });
       o = { x: s.x, y: s.y, options: opts };
       this.siteOffers.set(key, o);
@@ -331,13 +331,14 @@
         RES.forEach(r => this.res[r] += opt.bundle[r]);
         this.say(`Ancient site: gained ${opt.bundle.food} food, ${opt.bundle.materials} materials, ${opt.bundle.wealth} wealth.`);
       } else if (opt.id === 'explore') {
-        this.revealArea(s.x, s.y, 4);
+        this.revealArea(s.x, s.y, CFG.siteExploreRadius);
         this.say('Ancient site: a large area was revealed.');
       } else if (opt.id === 'features') {
         const rng = CV.mulberry32(CV.hash3(s.x, s.y, 7) * 1e9 | 0);
         let placed = 0, tries = 0;
-        while (placed < 2 && tries++ < 200) {
-          const x = s.x + Math.floor(rng() * 9) - 4, y = s.y + Math.floor(rng() * 9) - 4, t = this.world.tile(x, y);
+        const fr = CFG.siteFeatureRadius;
+        while (placed < CFG.siteFeatureCount && tries++ < 200) {
+          const x = s.x + Math.floor(rng() * (2 * fr + 1)) - fr, y = s.y + Math.floor(rng() * (2 * fr + 1)) - fr, t = this.world.tile(x, y);
           if (t.site || this.feature(x, y) || (x === s.x && y === s.y)) continue;
           this.overrides.set(K(x, y), CV.makeFeature(rng(), t.type, sc));
           placed++;
