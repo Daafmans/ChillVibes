@@ -52,15 +52,11 @@ function play(seed, mode, maxTurns) {
         g.found(...best);
       }
       // explore cheapest frontier tile
-      let cand = null, cc = 1e9; const seen = new Set();
+      let cand = null, cc = 1e9;
       for (const k of g.known) {
         const kx = Math.floor((k + 65536) / 131072), ky = k - kx * 131072;
-        for (const [dx, dy] of N8) {
-          const x = kx + dx, y = ky + dy, kk = K(x, y);
-          if (g.known.has(kk) || seen.has(kk)) continue; seen.add(kk);
-          const c = g.canExplore(x, y);
-          if (c.ok && c.cost + Math.random() * 0.5 < cc) { cc = c.cost; cand = [x, y]; }
-        }
+        const c = g.canExplore(kx, ky);
+        if (c.ok && c.cost + Math.random() * 0.5 < cc) { cc = c.cost; cand = [kx, ky]; }
       }
       if (cand) g.explore(...cand);
     }
@@ -92,9 +88,21 @@ try {
     assert(g.known.size === 21, 'start reveals footprint: ' + g.known.size);
     const inc = g.income();
     log('start income ' + JSON.stringify(inc));
-    assert(!g.canExplore(0, 0).ok, 'cannot explore known tile');
-    const e = [...Array(5)].map((_, i) => g.canExplore(3, i - 2));
-    log('explore (3,*) -> ' + JSON.stringify(e.map(x => x.reason || 'ok')));
+    assert(!g.canExplore(0, 0).ok, 'cannot explore from a tile with no hidden neighbours');
+    assert(!g.canExplore(3, 0).ok, 'cannot explore from a hidden tile');
+    const e = [...Array(5)].map((_, i) => g.canExplore(2, i - 2));
+    log('explore (2,*) -> ' + JSON.stringify(e.map(x => x.reason || 'ok')));
+    // exploring spends all wealth; each 10 spent reveals one extra adjacent tile
+    for (const w of [0, 9, 10, 35]) {
+      const h = new CV.Game(5);
+      h.res.wealth = w;
+      const before = h.known.size, w0 = h.res.wealth;
+      const r = h.explore(2, 0);
+      const fresh = h.known.size - before;
+      assert(r.ok && h.res.wealth === 0, 'explore spends all wealth at ' + w0);
+      assert(r.bonus === Math.floor(w / 10), 'bonus at wealth ' + w + ': ' + r.bonus);
+      assert(fresh <= 9 + r.bonus && fresh >= r.bonus + 3, `wealth ${w} revealed ${fresh} new tiles`);
+    }
     g.taken.wider = 1; g.claimAll(); assert(g.claimed.size === 45, 'wider claims 45, got ' + g.claimed.size);
   }
   // idle: how fast does blight kill a lone city?

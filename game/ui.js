@@ -9,13 +9,25 @@
   const canvas = el('map'), ctx = canvas.getContext('2d');
 
   let g, cam = { x: 0, y: 0 }, target = { x: 0, y: 0 }, dirty = true, infoKey = null, W = 0, H = 0, dpr = 1;
-  let modalKind = null, offerShownFor = -1;
+  let modalKind = null, offerShownFor = -1, arrowHits = [];
 
-  function newGame(seed) {
-    g = new CV.Game(seed);
+  const SAVE_KEY = 'chillvibes.save.v1';
+  function save() {
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify(g.serialize())); } catch (e) { /* storage unavailable or full */ }
+  }
+  function load() {
+    try {
+      const s = JSON.parse(localStorage.getItem(SAVE_KEY));
+      if (!s || s.over) return null;
+      return CV.Game.restore(s);
+    } catch (e) { return null; }
+  }
+  function newGame(seed, game) {
+    g = game || new CV.Game(seed);
     cam = { x: 0, y: 0 }; target = { x: 0, y: 0 }; offerShownFor = -1;
     closeModal(); refresh();
   }
+  const randomSeed = () => Math.floor(Math.random() * 1e6) + 1;
   const fmt = y => RES.filter(r => y[r]).map(r => `${ICON[r]}${y[r]}`).join(' ') || '—';
   const cap = s => s[0].toUpperCase() + s.slice(1);
   const centre = () => ({ x: Math.round(cam.x), y: Math.round(cam.y) });
@@ -23,9 +35,9 @@
 
   function featureText(f) {
     if (!f) return '';
-    if (f.kind === 'city') return `City bonus: +${f.amount} ${RES.map(r => ICON[r]).join('')} for the owning city`;
-    if (f.kind === 'tile') return `Tile bonus: +${f.amount} ${ICON[f.res]}`;
-    return `${dot(f.color)}Relic (${f.color})`;
+    if (f.kind === 'city') return `${f.name}. City bonus: +${f.amount} ${RES.map(r => ICON[r]).join('')} for the owning city`;
+    if (f.kind === 'tile') return `${f.name}. Tile bonus: +${f.amount} ${ICON[f.res]}`;
+    return `${dot(f.color)}${f.name}. Relic (${f.color})`;
   }
   function reqText(req) { return req ? `${dot(req.color)}${req.n} ${req.color} relic${req.n > 1 ? 's' : ''}` : ''; }
 
@@ -35,12 +47,14 @@
     const next = g.nextPustuleTurn();
     const mat = g.res.materials >= g.threshold ? 'ok' : '';
     el('top').innerHTML =
-      `<span><b>Turn ${g.turn}</b></span>` +
-      RES.map(r => `<span>${ICON[r]} <b>${g.res[r]}</b> <span class="dim">+${inc[r]}</span>${r === 'materials' ? ` <span class="dim ${mat}">/ ${g.threshold}</span>` : ''}</span>`).join('') +
-      `<span class="dim">Cities ${p.cities}/${CFG.winCities} · Sites ${p.sites}/${CFG.winSites} · Projects ${p.projects}/${CFG.winProjects}</span>` +
-      `<span class="${g.turn >= CFG.blightStart ? 'warn' : 'dim'}">☣ ${g.turn >= CFG.blightStart ? `next pustule: turn ${next}` : `blight begins turn ${CFG.blightStart}`}</span>` +
+      `<span class="pill turn">Turn <b>${g.turn}</b></span>` +
+      RES.map(r => `<span class="pill">${ICON[r]} <b>${g.res[r]}</b> <span class="dim">+${inc[r]}</span>${r === 'materials' ? ` <span class="dim ${mat}">/ ${g.threshold}</span>` : ''}</span>`).join('') +
       `<span class="grow"></span>` +
-      `<button class="primary" data-act="end">End turn ⏎</button>`;
+      `<button data-act="newgame" title="Abandon this world and start a new one">New game</button>` +
+      `<span class="pill dim">Cities <b>${p.cities}/${CFG.winCities}</b></span>` +
+      `<span class="pill dim">Sites <b>${p.sites}/${CFG.winSites}</b></span>` +
+      `<span class="pill dim">Projects <b>${p.projects}/${CFG.winProjects}</b></span>` +
+      `<span class="pill ${g.turn >= CFG.blightStart ? 'warn' : 'dim'}">☣ ${g.turn >= CFG.blightStart ? `next pustule: turn ${next}` : `blight begins turn ${CFG.blightStart}`}</span>`;
   }
 
   function tileInfo(x, y) {
@@ -78,11 +92,11 @@
     const ex = g.canExplore(x, y), fd = g.canFound(x, y);
     const siteReady = g.sites.has(k) && !g.usedSites.has(k);
     let btns = '';
-    btns += `<button data-act="explore" ${ex.ok ? '' : 'disabled'} title="${ex.ok ? '' : ex.reason}">Explore (E) · ${ICON.wealth}${ex.cost}</button>`;
+    btns += `<button class="primary" data-act="explore" ${ex.ok ? '' : 'disabled'} title="${ex.ok ? 'Exploring ends the turn' : ex.reason}">Explore &amp; end turn (E) · ${ICON.wealth}${g.res.wealth}${ex.bonus ? ` → +${ex.bonus} tile${ex.bonus > 1 ? 's' : ''}` : ''}</button>`;
     btns += `<button data-act="found" ${fd.ok ? '' : 'disabled'} title="${fd.ok ? '' : fd.reason}">Found city (F) · ${ICON.food}${fd.cost}</button>`;
     if (siteReady) btns += `<button class="primary" data-act="site">Activate site (A)</button>`;
     const why = [];
-    if (!ex.ok && ti.known === false) why.push(ex.reason);
+    if (!ex.ok) why.push(ex.reason);
     if (!fd.ok && ti.known) why.push(fd.reason);
     el('info').innerHTML =
       `<h3>${ti.title} <span class="dim">${x},${y}</span></h3>` +
@@ -98,7 +112,7 @@
     h += `<div class="row dim">Next project at ${ICON.materials}${g.threshold} (you have ${g.res.materials})</div>`;
     h += `<div class="btns" style="margin:6px 0 8px"><button data-act="projects" class="${avail ? 'primary pulse' : ''}" ${avail ? '' : 'disabled'}>Choose a project</button></div>`;
     h += RES.length ? `<div class="row dim">Relics in your cities: ${CV.COLORS.map(c => `${dot(c)}${g.relicCount(c)}`).join('  ')}</div>` : '';
-    h += have.length ? have.map(({ p, n }) => `<span class="chip" title="${p.desc}">${p.name}${n > 1 ? ' ×' + n : ''}</span>`).join('') : '<div class="row dim">No projects yet.</div>';
+    h += have.length ? have.map(({ p, n }) => `<span class="chip" data-tip="${p.desc.replace(/"/g, '&quot;')}">${p.name}${n > 1 ? ' ×' + n : ''}</span>`).join('') : '<div class="row dim">No projects yet.</div>';
     el('projects').innerHTML = h;
   }
 
@@ -109,6 +123,7 @@
 
   function refresh() {
     renderTop(); renderInfo(); renderProjects(); renderToast(); dirty = true;
+    save();
     if (g.over) return showOver();
     if (g.projectAvailable() && offerShownFor !== g.projectCount && modalKind === null) {
       offerShownFor = g.projectCount; openProjects();
@@ -151,7 +166,9 @@
     }).join('');
     openModal(`<div class="sheet"><h3>\u{1F5FF} Ancient site at ${offer.x},${offer.y}</h3>
       <div class="dim">Pick one benefit. A site can be activated once.</div>
-      <div class="cards">${cards}</div><div class="btns"><button data-act="close">Later</button></div></div>`, 'site');
+      <div class="cards">${cards}</div><div class="btns">${g.deferredSites.has(key)
+        ? '<button data-act="close">Close</button>'
+        : `<button data-act="defer" data-key="${key}" title="Activate now and pick the benefit later, from anywhere">Choose later</button>`}</div></div>`, 'site');
   }
 
   function showOver() {
@@ -163,23 +180,42 @@
   }
 
   // ---------- actions ----------
-  function doExplore() { const c = centre(); if (g.explore(c.x, c.y).ok) refresh(); }
+  function doExplore(c = centre()) { if (g.explore(c.x, c.y).ok) { g.endTurn(); infoKey = null; refresh(); } }
   function doFound() { const c = centre(); if (g.found(c.x, c.y).ok) refresh(); }
   function doSite() { const k = K(centre().x, centre().y); if (g.sites.has(k) && !g.usedSites.has(k)) openSite(k); }
-  function doEnd() { g.endTurn(); refresh(); }
 
   document.addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;
     const a = b.dataset.act;
-    if (a === 'end') doEnd();
-    else if (a === 'explore') doExplore();
+    if (a === 'explore') doExplore();
     else if (a === 'found') doFound();
     else if (a === 'site') doSite();
+    else if (a === 'defer') { if (g.deferSite(+b.dataset.key).ok) { closeModal(); refresh(); } }
     else if (a === 'projects') openProjects();
     else if (a === 'close') closeModal();
-    else if (a === 'restart') newGame(Math.floor(Math.random() * 1e6) + 1);
+    else if (a === 'restart') newGame(randomSeed());
+    else if (a === 'newgame') { if (g.over || confirm('Abandon this world and start a new game?')) newGame(randomSeed()); }
     else if (b.dataset.pick) { if (g.chooseProject(b.dataset.pick).ok) { closeModal(); refresh(); } }
     else if (b.dataset.site) { if (g.activateSite(+b.dataset.site, b.dataset.opt).ok) { closeModal(); refresh(); } }
+  });
+
+  // ---------- tooltips ----------
+  const tip = document.createElement('div');
+  tip.id = 'tip'; tip.hidden = true; document.body.appendChild(tip);
+  function placeTip(e) {
+    const w = tip.offsetWidth, h = tip.offsetHeight;
+    tip.style.left = Math.max(6, Math.min(e.clientX + 12, innerWidth - w - 6)) + 'px';
+    tip.style.top = Math.max(6, e.clientY - h - 12) + 'px';
+  }
+  document.addEventListener('pointerover', e => {
+    const t = e.target.closest && e.target.closest('[data-tip]');
+    if (!t) return;
+    tip.textContent = t.dataset.tip; tip.hidden = false; placeTip(e);
+  });
+  document.addEventListener('pointermove', e => { if (!tip.hidden) placeTip(e); });
+  document.addEventListener('pointerout', e => {
+    const t = e.target.closest && e.target.closest('[data-tip]');
+    if (t && !t.contains(e.relatedTarget)) tip.hidden = true;
   });
 
   // ---------- input ----------
@@ -188,8 +224,7 @@
     if (e.key === 'Escape' && modalKind && modalKind !== 'over') { closeModal(); return; }
     if (modalKind) return;
     if (KEYS[e.key]) { e.preventDefault(); const s = e.shiftKey ? 5 : 1; target.x = Math.round(target.x) + KEYS[e.key][0] * s; target.y = Math.round(target.y) + KEYS[e.key][1] * s; dirty = true; return; }
-    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); doEnd(); }
-    else if (e.key === 'e' || e.key === 'E') doExplore();
+    if (e.key === 'e' || e.key === 'E') doExplore();
     else if (e.key === 'f' || e.key === 'F') doFound();
     else if (e.key === 'a' || e.key === 'A') doSite();
     else if (e.key === 'p' || e.key === 'P') openProjects();
@@ -213,10 +248,16 @@
     if (!drag) return;
     canvas.classList.remove('drag');
     if (drag.moved) { target.x = Math.round(cam.x); target.y = Math.round(cam.y); }
-    else { // click: centre on that tile
+    else { // click: centre on that tile (or on the site an arrow points to)
       const r = canvas.getBoundingClientRect();
-      target.x = Math.round(cam.x + (e.clientX - r.left - W / 2) / TS);
-      target.y = Math.round(cam.y + (e.clientY - r.top - H / 2) / TS);
+      const mx = e.clientX - r.left, my = e.clientY - r.top;
+      const hit = arrowHits.find(a => Math.hypot(a.x - mx, a.y - my) < 26);
+      if (hit) { target.x = hit.site.x; target.y = hit.site.y; }
+      else {
+        const tx = Math.round(cam.x + (mx - W / 2) / TS), ty = Math.round(cam.y + (my - H / 2) / TS);
+        if (tx === Math.round(target.x) && ty === Math.round(target.y) && g.canExplore(tx, ty).ok) doExplore({ x: tx, y: ty }); // re-click selected tile = explore it
+        else { target.x = tx; target.y = ty; }
+      }
     }
     drag = null; dirty = true;
   });
@@ -285,16 +326,19 @@
   }
 
   function drawArrows() {
+    // the HUD floats over the canvas, so keep arrows inside the part of the map that is actually visible
+    const top = el('top').offsetHeight + 20, bottom = H - el('panel').offsetHeight - 20, m = 28;
+    arrowHits = [];
     for (const [k, s] of g.sites) {
       if (g.usedSites.has(k)) continue;
       const px = W / 2 + (s.x - cam.x) * TS, py = H / 2 + (s.y - cam.y) * TS;
-      if (px > 20 && px < W - 20 && py > 20 && py < H - 20) continue;
-      const dx = px - W / 2, dy = py - H / 2, len = Math.hypot(dx, dy) || 1;
-      const t = Math.min((W / 2 - 26) / Math.abs(dx || 1e-9), (H / 2 - 26) / Math.abs(dy || 1e-9));
-      const ax = W / 2 + dx * t, ay = H / 2 + dy * t, ux = dx / len, uy = dy / len;
+      if (px >= 0 && px <= W && py >= top - 10 && py <= bottom + 10) continue;
+      const ax = Math.min(Math.max(px, m), W - m), ay = Math.min(Math.max(py, top + m / 2), bottom - m / 2);
+      const dx = px - ax, dy = py - ay, len = Math.hypot(dx, dy) || 1, ux = dx / len, uy = dy / len;
       ctx.save(); ctx.translate(ax, ay); ctx.rotate(Math.atan2(uy, ux));
       ctx.beginPath(); ctx.moveTo(12, 0); ctx.lineTo(-8, -9); ctx.lineTo(-8, 9); ctx.closePath();
-      ctx.fillStyle = '#e8d27a'; ctx.fill(); ctx.restore();
+      ctx.fillStyle = '#e8d27a'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#000'; ctx.stroke(); ctx.restore();
+      arrowHits.push({ x: ax - ux * 11, y: ay - uy * 11, site: s });
       glyph('\u{1F5FF}', ax - ux * 22, ay - uy * 22, 18);
     }
   }
@@ -331,6 +375,8 @@
   CV.ui = { newGame, goto, get game() { return g; } };
   const qs = new URLSearchParams(location.search);
   resize();
-  newGame(parseInt(qs.get('seed'), 10) || Math.floor(Math.random() * 1e6) + 1);
+  const seedParam = parseInt(qs.get('seed'), 10);
+  const saved = seedParam ? null : load();
+  newGame(seedParam || randomSeed(), saved);
   requestAnimationFrame(frame);
 })(globalThis.CV);

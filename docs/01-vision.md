@@ -10,7 +10,7 @@ A single-player, turn-based empire builder, Civilization reduced to its core. Yo
 2. **Two questions drive every turn.**
    - *Where do I explore next?*
    - *Where do I expand next?*
-3. **Exploration is the central verb.** It costs a resource, its price grows with distance, and projects change *how* you explore.
+3. **Exploration is the central verb.** It never has a fixed price, but all your **Wealth** is spent each time, and the amount decides how much the exploration reveals, and projects change *how* you explore.
 4. **Projects change the rules, not the numbers.** A project that gives +10% production is not allowed. A project that lets you explore without an adjacent known tile is.
 5. **Pressure through blight, not opponents.** The threat is a spreading environmental clock. It forces you to move outward instead of sitting still.
 6. **Short and readable.** One map view and one contextual panel. Three resources.

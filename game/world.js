@@ -9,12 +9,16 @@
     return (h >>> 0) / 4294967296;
   }
 
-  // Build a feature from two uniform randoms. scale multiplies bonus amounts (not relics).
-  CV.makeFeature = function (u, v, scale) {
+  // Pick a feature valid on this base tile type from one uniform random. scale multiplies bonus amounts (not relics).
+  CV.makeFeature = function (u, type, scale) {
     scale = scale || 1;
-    if (u < 0.35) return { kind: 'city', amount: Math.max(1, Math.round(1 * scale)) };
-    if (u < 0.7) return { kind: 'tile', res: RES[Math.floor(v * 3)], amount: Math.max(1, Math.round(2 * scale)) };
-    return { kind: 'relic', color: COLORS[Math.floor(v * 3)] };
+    const pool = CV.FEATURES.filter(f => f.on.includes(type));
+    const d = pool[Math.min(pool.length - 1, Math.floor(u * pool.length))];
+    const f = { id: d.id, name: d.name, kind: d.kind };
+    if (d.kind === 'relic') f.color = d.color;
+    else if (d.kind === 'tile') { f.res = d.res; f.amount = Math.max(1, Math.round(2 * scale)); }
+    else f.amount = Math.max(1, Math.round(1 * scale));
+    return f;
   };
 
   class World {
@@ -78,9 +82,9 @@
         else type = this.landType(x, y);
       }
       let feature = null, site = false;
-      if (type !== 'ocean' && CV.cheb(x, y, 0, 0) >= 2) {
-        if (CV.cheb(x, y, 0, 0) >= 3 && this.rnd(x, y, 12) < CFG.siteChance) site = true;
-        else if (this.rnd(x, y, 10) < CFG.featureChance) feature = CV.makeFeature(this.rnd(x, y, 11), this.rnd(x, y, 13), 1);
+      if (CV.cheb(x, y, 0, 0) >= 2) {
+        if (type !== 'ocean' && CV.cheb(x, y, 0, 0) >= 3 && this.rnd(x, y, 12) < CFG.siteChance) site = true;
+        else if (this.rnd(x, y, 10) < CFG.featureChance) feature = CV.makeFeature(this.rnd(x, y, 11), type, 1);
       }
       return { x, y, type, feature, site };
     }

@@ -29,10 +29,8 @@
       let ex = null, ec = 1e9;
       for (const k of g.known) {
         const kx = Math.floor((k + 65536) / 131072), ky = k - kx * 131072;
-        for (const [dx, dy] of CV.N8) {
-          const c = g.canExplore(kx + dx, ky + dy);
-          if (c.ok && c.cost < ec) { ec = c.cost; ex = [kx + dx, ky + dy]; }
-        }
+        const c = g.canExplore(kx, ky);
+        if (c.ok && c.cost < ec) { ec = c.cost; ex = [kx, ky]; }
       }
       if (ex) { CV.ui.goto(ex[0], ex[1]); click('[data-act=explore]'); }
       click('[data-pick]:not([disabled])'); click('[data-act=close]');
@@ -44,7 +42,7 @@
         const s = g.sites.get(k); CV.ui.goto(s.x, s.y); click('[data-act=site]');
         click('[data-opt=bundle]'); click('[data-act=close]');
       }
-      click('[data-act=end]');
+      if (!ex) CV.ui.game.endTurn(); // no legal explore: nudge the sim forward so the test keeps progressing
     }
     const g = CV.ui.game;
     out.push('turn ' + g.turn + ' cities ' + g.cities.length + ' known ' + g.known.size + ' proj ' + g.projectCount + ' over ' + JSON.stringify(g.over));

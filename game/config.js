@@ -3,7 +3,7 @@
   CV.CFG = {
     startFood: 12, startMaterials: 0, startWealth: 12,
     cityBaseCost: 40, cityCostGrowth: 1.45,       // TUNE: food, x1.45 per owned city
-    exploreFreeDist: 3, exploreCostPerDist: 1.5,  // TUNE: wealth per tile of distance beyond the free ring
+    exploreWealthPerTile: 10,                     // TUNE: exploring spends all wealth; each 10 spent reveals one extra tile
     projectBase: 60, projectGrowth: 1.4,          // TUNE: materials threshold, multiplicative
     blightStart: 30, blightEvery: 10,
     blightSpawnRadius: 20, blightSpread: 3,       // TUNE: tiles gained per pustule per turn
@@ -14,16 +14,39 @@
   };
   CV.RES = ['food', 'materials', 'wealth'];
   CV.COLORS = ['blue', 'green', 'black'];
-  CV.K = (x, y) => x * 131072 + y;               // |y| must stay < 65536
+  // Special features (docs/05-special-tiles.md). kind: tile (+2 of res on the tile), city (+1 of each for the owner), relic.
+  CV.FEATURES = [
+    { id: 'fertileValley', name: 'Fertile Valley', on: ['plains'], kind: 'tile', res: 'food' },
+    { id: 'crossroads', name: 'Crossroads', on: ['plains', 'desert'], kind: 'tile', res: 'wealth' },
+    { id: 'oldGrowth', name: 'Old Growth', on: ['forest'], kind: 'tile', res: 'materials' },
+    { id: 'richVein', name: 'Rich Vein', on: ['mountains'], kind: 'tile', res: 'materials' },
+    { id: 'goldSeam', name: 'Gold Seam', on: ['mountains'], kind: 'tile', res: 'wealth' },
+    { id: 'oasis', name: 'Oasis', on: ['desert'], kind: 'tile', res: 'food' },
+    { id: 'fishingBanks', name: 'Fishing Banks', on: ['ocean'], kind: 'tile', res: 'food' },
+    { id: 'pearlBeds', name: 'Pearl Beds', on: ['ocean'], kind: 'tile', res: 'wealth' },
+    { id: 'sacredGrove', name: 'Sacred Grove', on: ['plains', 'forest'], kind: 'city' },
+    { id: 'hotSprings', name: 'Hot Springs', on: ['mountains', 'forest'], kind: 'city' },
+    { id: 'naturalHarbour', name: 'Natural Harbour', on: ['plains', 'desert', 'mountains'], kind: 'city' },
+    { id: 'tidalShrine', name: 'Tidal Shrine', on: ['ocean', 'plains'], kind: 'relic', color: 'blue' },
+    { id: 'sunkenIdol', name: 'Sunken Idol', on: ['ocean', 'forest'], kind: 'relic', color: 'blue' },
+    { id: 'standingStones', name: 'Standing Stones', on: ['forest', 'plains'], kind: 'relic', color: 'green' },
+    { id: 'foundersCairn', name: 'Founders’ Cairn', on: ['plains', 'mountains'], kind: 'relic', color: 'green' },
+    { id: 'obsidianAltar', name: 'Obsidian Altar', on: ['mountains', 'desert'], kind: 'relic', color: 'black' },
+    { id: 'boneGarden', name: 'Bone Garden', on: ['desert', 'forest'], kind: 'relic', color: 'black' },
+  ];
+  CV.K =(x, y) => x * 131072 + y;               // |y| must stay < 65536
   CV.cheb = (ax, ay, bx, by) => Math.max(Math.abs(ax - bx), Math.abs(ay - by));
   CV.N8 = [[-1, -1], [0, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [0, 1], [1, 1]];
   CV.mulberry32 = function (a) {
-    return function () {
+    const f = function () {
       a |= 0; a = (a + 0x6D2B79F5) | 0;
       let t = Math.imul(a ^ (a >>> 15), 1 | a);
       t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
       return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
     };
+    f.getState = () => a;
+    f.setState = v => { a = v; };
+    return f;
   };
   CV.BASE_YIELD = {
     plains: { food: 2, wealth: 1 },

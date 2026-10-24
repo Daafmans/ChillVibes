@@ -17,6 +17,7 @@
       this.near = new Map();        // hidden tile key -> Chebyshev distance to nearest known tile (<= glimpseMax)
       this.sites = new Map();       // found ancient sites: key -> {x,y}
       this.usedSites = new Set();
+      this.deferredSites = new Set(); // activated sites whose benefit is still to be chosen
       this.siteOffers = new Map();
       this.overrides = new Map();   // features added by ancient sites
       this.blight = new Map();      // key -> {x,y,pustule}
@@ -28,6 +29,31 @@
       this.over = null;
       this.log = [];
       this.addCity(0, 0);
+    }
+
+    // ---------- persistence ----------
+    // Site offers are deterministic per site, so they are rebuilt on demand rather than saved.
+    serialize() {
+      return {
+        seed: this.seed, rng: this.rng.getState(), turn: this.turn, res: this.res,
+        cities: this.cities, nextCityId: this.nextCityId,
+        known: [...this.known], near: [...this.near], sites: [...this.sites], usedSites: [...this.usedSites],
+        deferredSites: [...this.deferredSites], overrides: [...this.overrides], blight: [...this.blight], taken: this.taken,
+        projectCount: this.projectCount, threshold: this.threshold, projectOfferIds: this.projectOfferIds,
+        exploredThisTurn: this.exploredThisTurn, over: this.over, log: this.log,
+      };
+    }
+    static restore(s) {
+      const g = new Game(s.seed);
+      g.rng.setState(s.rng); g.turn = s.turn; g.res = s.res;
+      g.cities = s.cities; g.nextCityId = s.nextCityId;
+      g.known = new Set(s.known); g.near = new Map(s.near); g.sites = new Map(s.sites); g.usedSites = new Set(s.usedSites);
+      g.deferredSites = new Set(s.deferredSites || []);
+      g.overrides = new Map(s.overrides); g.blight = new Map(s.blight); g.taken = s.taken;
+      g.projectCount = s.projectCount; g.threshold = s.threshold; g.projectOfferIds = s.projectOfferIds;
+      g.exploredThisTurn = s.exploredThisTurn; g.over = s.over; g.log = s.log;
+      g.claimAll();
+      return g;
     }
 
     say(msg) { this.log.push({ turn: this.turn, msg }); if (this.log.length > 60) this.log.shift(); }
@@ -115,36 +141,60 @@
     }
 
     // ---------- exploring ----------
-    exploreCost(x, y) {
-      return Math.ceil(Math.max(0, cheb(x, y, 0, 0) - CFG.exploreFreeDist) * CFG.exploreCostPerDist);
+    // Exploring spends all wealth; every exploreWealthPerTile of it reveals one extra tile.
+    exploreBonus() { return Math.floor(this.res.wealth / CFG.exploreWealthPerTile); }
+    // Hidden tiles touching the revealed patch, nearest the target first (seeded tie-break).
+    extraTiles(x, y, n) {
+      const patch = new Set();
+      for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) patch.add(K(x + dx, y + dy));
+      const out = [];
+      for (let r = 2; out.length < n && r <= 2 + n; r++) {
+        const ring = [];
+        for (let dx = -r; dx <= r; dx++) for (let dy = -r; dy <= r; dy++) {
+          if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+          const tx = x + dx, ty = y + dy;
+          if (this.known.has(K(tx, ty))) continue;
+          ring.push({ tx, ty, d: dx * dx + dy * dy, h: this.world.rnd(tx, ty, 21) });
+        }
+        ring.sort((a, b) => a.d - b.d || a.h - b.h);
+        // a tile only qualifies once it touches the patch; newly added tiles can unlock the rest of the ring
+        for (let again = true; again && out.length < n;) {
+          again = false;
+          for (let i = 0; i < ring.length && out.length < n; i++) {
+            const t = ring[i];
+            if (!N8.some(([ax, ay]) => patch.has(K(t.tx + ax, t.ty + ay)))) continue;
+            patch.add(K(t.tx, t.ty)); out.push([t.tx, t.ty]); ring.splice(i, 1); again = true; break;
+          }
+        }
+      }
+      return out;
     }
     canExplore(x, y) {
-      const cost = this.exploreCost(x, y);
-      if (this.over) return { ok: false, cost, reason: 'Game over' };
-      if (this.exploredThisTurn) return { ok: false, cost, reason: 'Already explored this turn' };
-      const k = K(x, y);
-      let adjacent = false, unknownIn3x3 = !this.known.has(k);
-      for (const [dx, dy] of N8) {
-        if (this.known.has(K(x + dx, y + dy))) adjacent = true; else unknownIn3x3 = true;
-      }
-      const frontier = !this.known.has(k) && adjacent;
+      const cost = 0, bonus = this.exploreBonus();
+      if (this.over) return { ok: false, cost, bonus, reason: 'Game over' };
+      if (this.exploredThisTurn) return { ok: false, cost, bonus, reason: 'Already explored this turn' };
+      const k = K(x, y), known = this.known.has(k);
+      let unknownIn3x3 = !known;
+      for (const [dx, dy] of N8) if (!this.known.has(K(x + dx, y + dy))) unknownIn3x3 = true;
       const open = this.taken.openfrontier && unknownIn3x3 &&
         this.cities.some(c => cheb(c.x, c.y, x, y) <= CFG.openFrontierRadius);
-      if (!frontier && !open) {
-        return { ok: false, cost, reason: this.known.has(k) ? 'Already explored' : 'Not next to known land' };
+      // normally exploration starts from a revealed tile that still has hidden neighbours
+      if (!(known && unknownIn3x3) && !open) {
+        return { ok: false, cost, reason: known ? 'Nothing hidden next to this tile' : 'Explore from a revealed tile' };
       }
       if (this.world.tile(x, y).type === 'ocean' && !this.taken.seafaring) return { ok: false, cost, reason: 'Cannot explore ocean' };
-      if (this.res.wealth < cost) return { ok: false, cost, reason: `Need ${cost} wealth` };
-      return { ok: true, cost };
+      return { ok: true, cost, bonus };
     }
     explore(x, y) {
       const c = this.canExplore(x, y);
       if (!c.ok) return c;
-      this.res.wealth -= c.cost;
       this.exploredThisTurn = true;
+      this.res.wealth = 0; // exploring spends all wealth; the remainder is lost too
       let cleansed = 0;
-      for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
-        const tx = x + dx, ty = y + dy, k = K(tx, ty);
+      const tiles = this.extraTiles(x, y, c.bonus);
+      for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) tiles.push([x + dx, y + dy]);
+      for (const [tx, ty] of tiles) {
+        const k = K(tx, ty);
         this.reveal(tx, ty);
         const b = this.blight.get(k);
         if (!b) continue;
@@ -208,10 +258,16 @@
         const rng = CV.mulberry32(this.seed * 13 + this.projectCount * 101 + 5);
         const pool = this.availableProjects().slice();
         for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
-        const pick = pool.slice(0, 3);
+        // at most one offered project may require relics
+        const pick = [];
+        for (const p of pool) {
+          if (pick.length === 3) break;
+          if (p.relic && pick.some(q => q.relic)) continue;
+          pick.push(p);
+        }
         if (pick.length && !pick.some(p => this.relicsOk(p.relic))) {
-          const free = pool.slice(3).find(p => this.relicsOk(p.relic));
-          if (free) pick[2] = free;
+          const free = pool.find(p => !p.relic && !pick.includes(p));
+          if (free) { if (pick.length < 3) pick.push(free); else pick[2] = free; }
         }
         this.projectOfferIds = pick.map(p => p.id);
       }
@@ -257,6 +313,12 @@
       if (opt.id === 'city') { const p = this.placeProblem(s.x, s.y); if (p) return p; }
       return null;
     }
+    deferSite(key) {
+      if (!this.sites.has(key) || this.usedSites.has(key) || this.over) return { ok: false, reason: 'Unavailable' };
+      this.deferredSites.add(key);
+      this.say('Ancient site activated: choose its benefit later.');
+      return { ok: true };
+    }
     activateSite(key, optId) {
       const s = this.sites.get(key);
       if (!s || this.over) return { ok: false, reason: 'Unavailable' };
@@ -276,8 +338,8 @@
         let placed = 0, tries = 0;
         while (placed < 2 && tries++ < 200) {
           const x = s.x + Math.floor(rng() * 9) - 4, y = s.y + Math.floor(rng() * 9) - 4, t = this.world.tile(x, y);
-          if (t.type === 'ocean' || t.site || this.feature(x, y) || (x === s.x && y === s.y)) continue;
-          this.overrides.set(K(x, y), CV.makeFeature(rng(), rng(), sc));
+          if (t.site || this.feature(x, y) || (x === s.x && y === s.y)) continue;
+          this.overrides.set(K(x, y), CV.makeFeature(rng(), t.type, sc));
           placed++;
         }
         this.say('Ancient site: two special features appeared nearby.');
@@ -290,6 +352,7 @@
         this.say(`Ancient site: ${n} blighted tiles cleansed.`);
       }
       this.usedSites.add(key);
+      this.deferredSites.delete(key);
       return { ok: true };
     }
 

@@ -17,7 +17,7 @@ All resources are **stored and spent globally**, not per city.
 |---|---|
 | **Food** | Founding cities |
 | **Materials** | Projects |
-| **Wealth** | Exploration |
+| **Wealth** | Exploration. All of it is spent on each exploration (+1 extra tile per 10) |
 
 - Every turn, each city adds the yields of **all its claimed tiles**.
 - **Desert** yields very little.
@@ -34,6 +34,8 @@ Some tiles carry a special feature on top of the basic type. A feature gives **o
 3. **Relic:** required by some projects.
 
 Features are **disabled** while the tile is blighted. Some projects reveal that a feature exists without its type.
+
+The full list (which base tiles each feature can appear on, its name and its bonuses) lives in `05-special-tiles.md`.
 
 ## 4. Cities
 - **Cost:** Food. **Instant**.
@@ -59,6 +61,7 @@ Ancient sites are also a **win-condition target** (find a specific number).
 ## 6. Projects
 - **Global**. Unlocked whenever the next threshold of materials is reached. The threshold goes up each time.
 - Every time the threshold is reach, the player is presented three options to choose from.
+- At most one of the offered options can require relics. Relic-requiring projects are never offered together.
 - One of the options can require the player to have a certain amount of relics. The relic requirement depends on the project in question and is always the same.
 - They **change how the game is played**. They are not percentage modifiers.
 - Some projects can be chosen multiple times, others are one-time only.
