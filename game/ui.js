@@ -1,6 +1,7 @@
 (function (CV) {
   const { K, CFG, RES, N8, PROJECTS } = CV;
-  const TS = 44;
+  const TS_MIN = 16, TS_MAX = 96;
+  let TS = 44;
   const ICON = { food: '\u{1F33E}', materials: '⛏️', wealth: '\u{1FA99}' };
   const TYPE_COLOR = { plains: '#a9c46c', forest: '#4f8a4b', mountains: '#8a8f99', desert: '#d9c48a', ocean: '#3f78b5' };
   const RELIC_COLOR = { blue: '#4aa3ff', green: '#5be37d', black: '#15151a' };
@@ -211,6 +212,8 @@
       `<input type="number" step="any" min="0" data-cfg="${k}" value="${CFG[k]}"></label>`).join('')}</div>`).join('');
     openModal(`<div class="sheet"><h3>Options</h3>
       <div class="dim">Changes to values are applied to the running game and kept for next time. Highlighted values differ from the default.${note ? ` <span class="warn">${note}</span>` : ''}</div>
+      <div class="optgroup"><h4>Sound</h4><label class="opt"><span>Volume</span>` +
+      `<input type="range" min="0" max="100" step="1" data-volume value="${Math.round(CV.audio.volume * 100)}"></label></div>
       <div class="optgrid">${body}</div>
       <div class="btns"><button class="primary" data-act="saveopts">Save</button>
       <button data-act="revert" title="Reset every value to its default">Revert to default</button>
@@ -246,8 +249,15 @@
   }
 
   // ---------- actions ----------
-  function doExplore(c = centre()) { if (g.explore(c.x, c.y).ok) { g.endTurn(); infoKey = null; refresh(); } }
-  function doFound() { const c = centre(); if (g.found(c.x, c.y).ok) refresh(); }
+  function doExplore(c = centre()) {
+    const r = g.explore(c.x, c.y);
+    if (r.ok) {
+      // one sound per exploration, rarest discovery wins
+      CV.audio.play(r.found.site ? 'exploreSite' : r.found.feature ? 'exploreFeature' : 'explore');
+      g.endTurn(); infoKey = null; refresh();
+    }
+  }
+  function doFound() { const c = centre(); if (g.found(c.x, c.y).ok) { CV.audio.play('city'); refresh(); } }
   function doSite() { const k = K(centre().x, centre().y); if (g.sites.has(k) && !g.usedSites.has(k)) openSite(k); }
 
   document.addEventListener('click', e => {
@@ -264,8 +274,16 @@
     else if (a === 'close') closeModal();
     else if (a === 'restart') newGame(randomSeed());
     else if (a === 'newgame') { if (g.over || confirm('Abandon this world and start a new game?')) newGame(randomSeed()); }
-    else if (b.dataset.pick) { if (g.chooseProject(b.dataset.pick).ok) { closeModal(); refresh(); } }
+    else if (b.dataset.pick) { if (g.chooseProject(b.dataset.pick).ok) { CV.audio.play('project'); closeModal(); refresh(); } }
     else if (b.dataset.site) { if (g.activateSite(+b.dataset.site, b.dataset.opt).ok) { closeModal(); refresh(); } }
+  });
+
+  // Volume applies immediately and is stored on its own, independent of Save/Cancel.
+  document.addEventListener('input', e => {
+    if (e.target.dataset && 'volume' in e.target.dataset) CV.audio.setVolume(e.target.value / 100);
+  });
+  document.addEventListener('change', e => {
+    if (e.target.dataset && 'volume' in e.target.dataset) CV.audio.play('blip');
   });
 
   // ---------- tooltips ----------
@@ -331,6 +349,16 @@
     drag = null; dirty = true;
   });
 
+  // Scroll wheel zooms about the centre tile (the one the panel describes).
+  canvas.addEventListener('wheel', e => {
+    e.preventDefault();
+    if (modalKind) return;
+    let next = Math.round(TS * Math.exp(-e.deltaY * 0.0015));
+    if (next === TS && e.deltaY) next += e.deltaY < 0 ? 1 : -1; // small trackpad ticks still move
+    TS = Math.max(TS_MIN, Math.min(TS_MAX, next));
+    dirty = true;
+  }, { passive: false });
+
   // ---------- drawing ----------
   function resize() {
     dpr = window.devicePixelRatio || 1;
@@ -351,17 +379,17 @@
     ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.fillStyle = RELIC_COLOR[color]; ctx.fill();
     ctx.lineWidth = 2; ctx.strokeStyle = '#fff'; ctx.stroke();
   }
-  function featureIcon(f, cx, cy, dim) {
+  function featureIcon(f, cx, cy, dim, z) {
     ctx.globalAlpha = dim ? 0.5 : 1;
-    if (f.kind === 'relic') relicDot(f.color, cx, cy, 7);
-    else if (f.kind === 'city') glyph('✨', cx, cy, 16);
-    else glyph(ICON[f.res], cx, cy, 15);
+    if (f.kind === 'relic') relicDot(f.color, cx, cy, 10 * z);
+    else if (f.kind === 'city') glyph('✨', cx, cy, 24 * z);
+    else glyph(ICON[f.res], cx, cy, 24 * z);
     ctx.globalAlpha = 1;
   }
 
   function drawTile(x, y, sx, sy) {
     const k = K(x, y), known = g.known.has(k), t = g.world.tile(x, y);
-    const cx = sx + TS / 2, cy = sy + TS / 2;
+    const cx = sx + TS / 2, cy = sy + TS / 2, z = TS / 44; // icon scale
     const bl = g.blight.get(k);
     if (known) {
       ctx.fillStyle = TYPE_COLOR[t.type]; ctx.fillRect(sx, sy, TS, TS);
@@ -371,14 +399,14 @@
         ctx.strokeRect(sx + 1.5, sy + 1.5, TS - 3, TS - 3);
       }
       const f = g.feature(x, y);
-      if (f) featureIcon(f, cx, cy + 8, !!bl);
-      if (t.site) { ctx.globalAlpha = g.usedSites.has(k) ? 0.35 : 1; glyph('\u{1F5FF}', cx, cy - 3, 22); ctx.globalAlpha = 1; }
+      if (f) featureIcon(f, cx, cy + (t.site ? 9 : 0) * z, !!bl, z);
+      if (t.site) { ctx.globalAlpha = g.usedSites.has(k) ? 0.35 : 1; glyph('\u{1F5FF}', cx, cy - (f ? 9 : 0) * z, 26 * z); ctx.globalAlpha = 1; }
       if (bl) {
         ctx.fillStyle = 'rgba(82,24,105,.82)'; ctx.fillRect(sx, sy, TS, TS);
-        if (bl.pustule && g.taken.discernment) glyph('☣️', cx, cy, 22);
+        if (bl.pustule && g.taken.discernment) glyph('☣️', cx, cy, 30 * z);
       }
       const city = g.cities.find(c => c.x === x && c.y === y);
-      if (city) { ctx.beginPath(); ctx.arc(cx, cy, 14, 0, 7); ctx.fillStyle = '#10151b'; ctx.fill(); glyph('\u{1F3E0}', cx, cy + 1, 20); }
+      if (city) { ctx.beginPath(); ctx.arc(cx, cy, 18 * z, 0, 7); ctx.fillStyle = '#10151b'; ctx.fill(); glyph('\u{1F3E0}', cx, cy + z, 26 * z); }
     } else {
       const gl = g.glimpse(x, y);
       let frontier = false;
@@ -387,8 +415,8 @@
       if (gl) {
         if (gl.type) { ctx.globalAlpha = 0.4; ctx.fillStyle = TYPE_COLOR[t.type]; ctx.fillRect(sx + 3, sy + 3, TS - 6, TS - 6); ctx.globalAlpha = 1; }
         if (gl.blight && bl) { ctx.fillStyle = 'rgba(110,40,140,.55)'; ctx.fillRect(sx + 3, sy + 3, TS - 6, TS - 6); }
-        if (gl.feature && t.feature) glyph('?', cx, cy + 8, 15, '#e8e0a0');
-        if (gl.site && t.site) { ctx.globalAlpha = 0.6; glyph('\u{1F5FF}', cx, cy - 3, 20); ctx.globalAlpha = 1; }
+        if (gl.feature && t.feature) glyph('?', cx, cy + (t.site && gl.site ? 9 : 0) * z, 24 * z, '#e8e0a0');
+        if (gl.site && t.site) { ctx.globalAlpha = 0.6; glyph('\u{1F5FF}', cx, cy - (gl.feature && t.feature ? 9 : 0) * z, 24 * z); ctx.globalAlpha = 1; }
       }
     }
     ctx.strokeStyle = 'rgba(0,0,0,.22)'; ctx.lineWidth = 1; ctx.strokeRect(sx + .5, sy + .5, TS - 1, TS - 1);

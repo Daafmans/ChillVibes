@@ -79,6 +79,20 @@
     revealArea(cx, cy, r) {
       for (let dx = -r; dx <= r; dx++) for (let dy = -r; dy <= r; dy++) this.reveal(cx + dx, cy + dy);
     }
+    // Irregular blob: the radius varies with angle (random harmonics, seeded) plus per-tile jitter,
+    // and the blob's centre is nudged off the site so it is neither square nor symmetrical.
+    revealBlob(cx, cy, r, rng) {
+      const harm = [1, 2, 3, 5].map(n => ({ n, a: (rng() * 0.4 + 0.1) / Math.sqrt(n), p: rng() * Math.PI * 2 }));
+      const ox = (rng() - 0.5) * r * 0.8, oy = (rng() - 0.5) * r * 0.8;
+      const reach = Math.ceil(r * 2 + 2);
+      this.reveal(cx, cy);
+      for (let dx = -reach; dx <= reach; dx++) for (let dy = -reach; dy <= reach; dy++) {
+        const ex = dx - ox, ey = dy - oy, d = Math.hypot(ex, ey), th = Math.atan2(ey, ex);
+        let lim = r * 1.2;
+        for (const h of harm) lim *= 1 + h.a * Math.sin(h.n * th + h.p) * 0.6;
+        if (d + (rng() - 0.5) * 1.6 <= lim) this.reveal(cx + dx, cy + dy);
+      }
+    }
     range(id) {
       const n = this.taken[id] || 0;
       if (!n) return -1;
@@ -193,8 +207,13 @@
       let cleansed = 0;
       const tiles = this.extraTiles(x, y, c.bonus);
       for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) tiles.push([x + dx, y + dy]);
+      const found = { site: false, feature: false };
       for (const [tx, ty] of tiles) {
         const k = K(tx, ty);
+        if (!this.known.has(k)) {
+          if (this.world.tile(tx, ty).site) found.site = true;
+          else if (this.feature(tx, ty)) found.feature = true;
+        }
         this.reveal(tx, ty);
         const b = this.blight.get(k);
         if (!b) continue;
@@ -203,7 +222,7 @@
         } else if (this.taken.fight) { this.blight.delete(k); cleansed++; }
       }
       if (cleansed) this.say(`Cleansed ${cleansed} blighted tile${cleansed > 1 ? 's' : ''}.`);
-      return c;
+      return { ...c, found };
     }
 
     // ---------- economy ----------
@@ -331,7 +350,7 @@
         RES.forEach(r => this.res[r] += opt.bundle[r]);
         this.say(`Ancient site: gained ${opt.bundle.food} food, ${opt.bundle.materials} materials, ${opt.bundle.wealth} wealth.`);
       } else if (opt.id === 'explore') {
-        this.revealArea(s.x, s.y, CFG.siteExploreRadius);
+        this.revealBlob(s.x, s.y, CFG.siteExploreRadius, CV.mulberry32(CV.hash3(s.x, s.y, 13) * 1e9 | 0));
         this.say('Ancient site: a large area was revealed.');
       } else if (opt.id === 'features') {
         const rng = CV.mulberry32(CV.hash3(s.x, s.y, 7) * 1e9 | 0);
