@@ -8,7 +8,7 @@ Numbers marked **[TUNE]** are placeholders for playtesting.
 - **Starting tile:** always forest, mountain or plains.
 - **Starting landmass:** between **50 and 80 tiles**, with **no desert** on it.
 - Map size: Effectively infite, generate on the fly
-- Knowledge states per tile: **hidden**, **known** (explored), and, with projects, **glimpsed** (partial information from the fog, see Projects).
+- Knowledge states per tile: **hidden**, **known** (explored), and, with projects, **glimpsed** (partial information from the fog, see `06-projects.md`).
 
 ## 2. Resources (global)
 All resources are **stored and spent globally**, not per city.
@@ -59,40 +59,7 @@ Benefits:
 Ancient sites are also a **win-condition target** (find a specific number).
 
 ## 6. Projects
-- **Global**. Unlocked whenever the next threshold of materials is reached. The threshold goes up each time.
-- Every time the threshold is reach, the player is presented three options to choose from.
-- At most one of the offered options can require relics. Relic-requiring projects are never offered together.
-- One of the options can require the player to have a certain amount of relics. The relic requirement depends on the project in question and is always the same.
-- They **change how the game is played**. They are not percentage modifiers.
-- Some projects can be chosen multiple times, others are one-time only.
-
-### Vision
-| Project        | Effect                                                                                        | Relic Quanity | Relic Color | Allow multiple? |
-| -------------- | --------------------------------------------------------------------------------------------- | ------------- | ----------- | --------------- |
-| Open Frontier  | Allow exploring within 20 tiles from any cities, regardless of whether it's already revealed. | 0             |             | No              |
-| Surveyor's Eye | See basic tile type up to 5 tiles into the fog                                                | 0             |             | Yes             |
-| Omen Reading   | See that a special feature exists (not its type) up to 5 tiles into the fog                   | 0             |             | Yes             |
-| Ancient Sight  | See ancient sites up to 5 tiles into the fog                                                  | 0             |             | Yes             |
-| Seafaring      | Allow exploring ocean tiles                                                                   | 1             | Blue        | No              |
-
-### Expansion
-| Project            | Effect                                                                                                                                                                          | Relic Quanity | Relic Color | Allow multiple? |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | ----------- | --------------- |
-| Harbour Founding   | Allow building cities on water tiles                                                                                                                                            | 1             | Green       | No              |
-| Wider Borders      | Cities claim tiles **one extra tile away**. This includes cities that were already placed. If more than one city would claim a tile this way, the oldest city takes precedence. | 0             |             | Yes             |
-| Legacy of Distance | Ancient tile bonuses scale with distance from the starting city                                                                                                                 | 0             |             | Yes             |
-| Trade Empire       | Cities produce one extra wealth, material and food if at least one claimed tile borders a tile claimed by another city                                                          | 0             |             | Yes             |
-| Glorious Capital   | The oldest city produces three extra wealth, material and food for each other city within 10 tiles.                                                                             | 2             | Green       | Yes             |
-
-
-### Blight
-| Project             | Effect                                                                                                                                                | Relic Quanity | Relic Color | Allow multiple? |
-| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | ----------- | --------------- |
-| Blight Sight        | See blight up to 5 tiles into the fog                                                                                                                 | 0             |             | No              |
-| Pustule Discernment | Tell pustules apart from ordinary blight                                                                                                              | 1             | Black       | No              |
-| Blight fight        | When exploring, any blighted tiles that would be explored are cleansed                                                                                | 1             | Black       | No              |
-| Pustule burst       | When exploring a tile with a pustule, the pustule is destroyed (the player is notified when this happens even if they don't have pustule discernment) | 2             | Black       |                 |
-
+Spent with Materials: each time the threshold is reached, the player picks one of three options. Projects change how the game is played rather than adding percentages. The rules and the full list (Vision, Expansion, Blight) live in `06-projects.md`.
 
 ## 7. Blight (the threat)
 - **Turn 30**, then **every 10 turns**: one **unclaimed tile within 20 tiles of a city** becomes a **pustule**.
