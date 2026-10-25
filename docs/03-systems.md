@@ -20,12 +20,12 @@ All resources are **stored and spent globally**, not per city.
 | **Wealth** | Exploration. All of it is spent on each exploration (+1 extra tile per 10) |
 
 - Every turn, each city adds the yields of **all its claimed tiles**.
-- **Desert** yields very little.
-- **Mountains, plains and forests** have the **same total yield with different mixes**. **[TUNE]** Starting point:
-  - Plains: 2 food, 1 wealth
-  - Forest: 1 food, 2 material
-  - Mountains: 2 material, 1 wealth
-  - Ocean: 1 food, 1 wealth, 1 material
+- **Desert** yields nothing.
+- **Plains, forests, mountains and ocean** have the **same total yield (2) with different mixes**. Base yields are kept low so that special features stand out. **[TUNE]** Starting point:
+  - Plains: 1 food, 1 wealth
+  - Forest: 1 food, 1 material
+  - Mountains: 1 material, 1 wealth
+  - Ocean: 2 food
 
 ## 3. Special features
 Some tiles carry a special feature on top of the basic type. A feature gives **one** of:
@@ -59,7 +59,7 @@ Benefits:
 Ancient sites are also a **win-condition target** (find a specific number).
 
 ## 6. Projects
-Spent with Materials: each time the threshold is reached, the player picks one of three options. Projects change how the game is played rather than adding percentages. The rules and the full list (Vision, Expansion, Blight) live in `06-projects.md`.
+Spent with Materials: each time the threshold is reached, the player picks one of four options. Projects change how the game is played rather than adding percentages. The rules and the full list (Vision, Expansion, Blight) live in `06-projects.md`.
 
 ## 7. Blight (the threat)
 - **Turn 30**, then **every 10 turns**: one **unclaimed tile within 20 tiles of a city** becomes a **pustule**.

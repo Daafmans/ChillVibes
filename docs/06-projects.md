@@ -4,7 +4,7 @@ Projects are global rule changes bought with Materials. See `03-systems.md` for 
 
 ## Rules
 - **Global**. Unlocked whenever the next threshold of materials is reached. The threshold goes up each time.
-- Every time the threshold is reach, the player is presented three options to choose from.
+- Every time the threshold is reach, the player is presented four options to choose from.
 - At most one of the offered options can require relics. Relic-requiring projects are never offered together.
 - One of the options can require the player to have a certain amount of relics. The relic requirement depends on the project in question and is always the same.
 - They **change how the game is played**. They are not percentage modifiers.
@@ -14,9 +14,9 @@ Projects are global rule changes bought with Materials. See `03-systems.md` for 
 | Project        | Effect                                                                                        | Relic Quanity | Relic Color | Allow multiple? |
 | -------------- | --------------------------------------------------------------------------------------------- | ------------- | ----------- | --------------- |
 | Open Frontier  | Allow exploring within 20 tiles from any cities, regardless of whether it's already revealed. | 0             |             | No              |
-| Surveyor's Eye | See basic tile type up to 5 tiles into the fog                                                | 0             |             | Yes             |
-| Omen Reading   | See that a special feature exists (not its type) up to 5 tiles into the fog                   | 0             |             | Yes             |
-| Ancient Sight  | See ancient sites up to 5 tiles into the fog                                                  | 0             |             | Yes             |
+| Surveyor's Eye | See basic tile type up to 1 tile into the fog                                                 | 0             |             | Yes             |
+| Omen Reading   | See that a special feature exists (not its type) up to 1 tile into the fog                    | 0             |             | Yes             |
+| Ancient Sight  | See ancient sites up to 1 tile into the fog                                                   | 0             |             | Yes             |
 | Seafaring      | Allow exploring ocean tiles                                                                   | 1             | Blue        | No              |
 
 ## Expansion
@@ -31,7 +31,7 @@ Projects are global rule changes bought with Materials. See `03-systems.md` for 
 ## Blight
 | Project             | Effect                                                                                                                                                | Relic Quanity | Relic Color | Allow multiple? |
 | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | ----------- | --------------- |
-| Blight Sight        | See blight up to 5 tiles into the fog                                                                                                                 | 0             |             | No              |
+| Blight Sight        | See blight up to 1 tile into the fog                                                                                                                  | 0             |             | No              |
 | Pustule Discernment | Tell pustules apart from ordinary blight                                                                                                              | 1             | Black       | No              |
 | Blight fight        | When exploring, any blighted tiles that would be explored are cleansed                                                                                | 1             | Black       | No              |
 | Pustule burst       | When exploring a tile with a pustule, the pustule is destroyed (the player is notified when this happens even if they don't have pustule discernment) | 2             | Black       |                 |

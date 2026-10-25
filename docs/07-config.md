@@ -6,9 +6,9 @@ All tunable gameplay numbers live in `CV.CFG` in `game/config.js`. Every value i
 
 | Key | Default | Description |
 |---|---|---|
-| `startFood` | 12 | Starting food |
+| `startFood` | 0 | Starting food |
 | `startMaterials` | 0 | Starting materials |
-| `startWealth` | 12 | Starting wealth |
+| `startWealth` | 0 | Starting wealth |
 
 ## Cities
 
@@ -31,10 +31,10 @@ Surveyor's Eye, Omen Reading, Ancient Sight, Blight Sight. Range = `base + step 
 
 | Key | Default | Description |
 |---|---|---|
-| `glimpseBase` | 5 | Base range |
-| `glimpseStep` | 2 | Extra range per additional copy |
+| `glimpseBase` | 1 | Base range |
+| `glimpseStep` | 1 | Extra range per additional copy |
 | `glimpseMax` | 15 | Maximum range |
-| `blightSightRange` | 5 | Range of Blight Sight |
+| `blightSightRange` | 1 | Range of Blight Sight |
 
 ## World generation
 
@@ -66,7 +66,7 @@ Surveyor's Eye, Omen Reading, Ancient Sight, Blight Sight. Range = `base + step 
 |---|---|---|
 | `projectBase` | 60 | Materials threshold for the first project |
 | `projectGrowth` | 1.4 | Threshold multiplier after each project |
-| `projectOfferSize` | 3 | Projects offered each time |
+| `projectOfferSize` | 4 | Projects offered each time |
 | `widerBorderBonus` | 1 | Extra claim radius per Wider Borders copy |
 | `legacyPerDistance` | 0.05 | Site benefit scale increases by this × distance from start, per Legacy copy |
 | `tradeBonus` | 1 | Each of food/materials/wealth per Trade Empire copy per touching city |
@@ -110,11 +110,11 @@ Surveyor's Eye, Omen Reading, Ancient Sight, Blight Sight. Range = `base + step 
 
 | Tile | Food | Materials | Wealth |
 |---|---|---|---|
-| Plains | 2 | – | 1 |
-| Forest | 1 | 2 | – |
-| Mountains | – | 2 | 1 |
-| Ocean | 1 | 1 | 1 |
-| Desert | – | 1 | – |
+| Plains | 1 | – | 1 |
+| Forest | 1 | 1 | – |
+| Mountains | – | 1 | 1 |
+| Ocean | 2 | – | – |
+| Desert | – | – | – |
 
 ### Special features (`CV.FEATURES`)
 

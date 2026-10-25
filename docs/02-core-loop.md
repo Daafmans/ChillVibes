@@ -56,7 +56,7 @@
 ### Where to explore next?
 - Every pick reveals a 3×3 patch plus one extra tile per 10 Wealth, so your choice is *which direction* and *how deep*.
 - Wealth builds up between explorations and is emptied by each one. Exploring every turn always reveals at least the 3×3 patch, while waiting lets Wealth build up for a bigger reveal later, so the question is *when* to cash in.
-- Wealth competes with other uses of tiles. Plains, forests and mountains all give the same total yield but in different mixes (see `03-systems.md`), so a mountain-heavy empire is rich in Materials but poor in Wealth.
+- Wealth competes with other uses of tiles. Plains, forests, mountains and ocean all give the same total yield but in different mixes (see `03-systems.md`), so a forest-heavy empire is rich in Materials but poor in Wealth.
 - Projects add **vision into the fog** (up to 5 tiles) of basic types, special features, ancient sites and blight. Each one lets you plan your exploration instead of picking blind.
 
 ### Where to expand next?

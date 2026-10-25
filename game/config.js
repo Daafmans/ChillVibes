@@ -3,7 +3,7 @@
   // tools/test.html can override any key via the query string (?key=value).
   CV.CFG = {
     // --- Start ---
-    startFood: 12, startMaterials: 0, startWealth: 12,
+    startFood: 0, startMaterials: 0, startWealth: 0,
 
     // --- Cities ---
     cityBaseCost: 40, cityCostGrowth: 1.45,       // food; cost = ceil(base * growth^(cities-1))
@@ -14,8 +14,8 @@
     openFrontierRadius: 20,                       // Open Frontier: explore this far (Chebyshev) from a city
 
     // --- Fog glimpses (Surveyor's Eye, Omen Reading, Ancient Sight, Blight Sight) ---
-    glimpseBase: 5, glimpseStep: 2, glimpseMax: 15, // range = base + step * (copies - 1), capped at max
-    blightSightRange: 5,
+    glimpseBase: 1, glimpseStep: 1, glimpseMax: 15, // range = base + step * (copies - 1), capped at max
+    blightSightRange: 1,
 
     // --- World generation ---
     blobMin: 50, blobVariance: 31,                // starting landmass has blobMin .. blobMin+blobVariance-1 tiles
@@ -33,7 +33,7 @@
 
     // --- Projects ---
     projectBase: 60, projectGrowth: 1.4,          // materials threshold, multiplied by growth after each project
-    projectOfferSize: 3,                          // projects offered each time
+    projectOfferSize: 4,                          // projects offered each time
     widerBorderBonus: 1,                          // extra claim radius per Wider Borders copy
     legacyPerDistance: 0.05,                      // site benefit scale += this * distance from start, per Legacy copy
     tradeBonus: 1,                                // each of food/materials/wealth per Trade Empire copy per touching city
@@ -93,22 +93,22 @@
     return f;
   };
   CV.BASE_YIELD = {
-    plains: { food: 2, wealth: 1 },
-    forest: { food: 1, materials: 2 },
-    mountains: { materials: 2, wealth: 1 },
-    ocean: { food: 1, wealth: 1, materials: 1 },
-    desert: { materials: 1 },
+    plains: { food: 1, wealth: 1 },
+    forest: { food: 1, materials: 1 },
+    mountains: { materials: 1, wealth: 1 },
+    ocean: { food: 2 },
+    desert: {},
   };
   CV.PROJECTS = [
     // Vision
     { id: 'openfrontier', cat: 'Vision', name: 'Open Frontier', multi: false, relic: null,
       get desc() { return `Explore any tile within ${CV.CFG.openFrontierRadius} tiles of a city, even if it is not next to known land.`; } },
     { id: 'surveyor', cat: 'Vision', name: "Surveyor's Eye", multi: true, relic: null,
-      get desc() { return `See basic tile types up to ${CV.CFG.glimpseBase} tiles into the fog (+${CV.CFG.glimpseStep} per extra copy).`; } },
+      get desc() { return `See basic tile types up to ${CV.CFG.glimpseBase} tile${CV.CFG.glimpseBase === 1 ? '' : 's'} into the fog (+${CV.CFG.glimpseStep} per extra copy).`; } },
     { id: 'omen', cat: 'Vision', name: 'Omen Reading', multi: true, relic: null,
-      get desc() { return `See that a special feature exists (not its type) up to ${CV.CFG.glimpseBase} tiles into the fog.`; } },
+      get desc() { return `See that a special feature exists (not its type) up to ${CV.CFG.glimpseBase} tile${CV.CFG.glimpseBase === 1 ? '' : 's'} into the fog.`; } },
     { id: 'sight', cat: 'Vision', name: 'Ancient Sight', multi: true, relic: null,
-      get desc() { return `See ancient sites up to ${CV.CFG.glimpseBase} tiles into the fog.`; } },
+      get desc() { return `See ancient sites up to ${CV.CFG.glimpseBase} tile${CV.CFG.glimpseBase === 1 ? '' : 's'} into the fog.`; } },
     { id: 'seafaring', cat: 'Vision', name: 'Seafaring', multi: false, relic: { n: 1, color: 'blue' },
       desc: 'Allows exploring ocean tiles.' },
     // Expansion
@@ -124,7 +124,7 @@
       get desc() { return `The oldest city makes +${CV.CFG.gloriousBonus} food, material and wealth for each other city within ${CV.CFG.gloriousRadius} tiles.`; } },
     // Blight
     { id: 'blightsight', cat: 'Blight', name: 'Blight Sight', multi: false, relic: null,
-      get desc() { return `See blight up to ${CV.CFG.blightSightRange} tiles into the fog.`; } },
+      get desc() { return `See blight up to ${CV.CFG.blightSightRange} tile${CV.CFG.blightSightRange === 1 ? '' : 's'} into the fog.`; } },
     { id: 'discernment', cat: 'Blight', name: 'Pustule Discernment', multi: false, relic: { n: 1, color: 'black' },
       desc: 'Tell pustules apart from ordinary blight.' },
     { id: 'fight', cat: 'Blight', name: 'Blight Fight', multi: false, relic: { n: 1, color: 'black' },

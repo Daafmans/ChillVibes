@@ -3,7 +3,8 @@
   const TS_MIN = 16, TS_MAX = 96;
   let TS = 44;
   const ICON = { food: '\u{1F33E}', materials: '⛏️', wealth: '\u{1FA99}' };
-  const TYPE_COLOR = { plains: '#a9c46c', forest: '#4f8a4b', mountains: '#8a8f99', desert: '#d9c48a', ocean: '#3f78b5' };
+  const TYPE_ICON = { plains: '\u{1F33F}', forest: '\u{1F332}', mountains: '⛰️', desert: '\u{1F335}', ocean: '\u{1F30A}' };
+  const TYPE_COLOR ={ plains: '#a9c46c', forest: '#4f8a4b', mountains: '#8a8f99', desert: '#d9c48a', ocean: '#3f78b5' };
   const RELIC_COLOR = { blue: '#4aa3ff', green: '#5be37d', black: '#15151a' };
   const CITY_COLORS = ['#ffd166', '#ef8354', '#9d8df1', '#4fd0d0', '#f28fad', '#b8e986', '#f6e27a', '#6ea8ff'];
   const el = id => document.getElementById(id);
@@ -32,7 +33,7 @@
   const fmt = y => RES.filter(r => y[r]).map(r => `${ICON[r]}${y[r]}`).join(' ') || '—';
   const cap = s => s[0].toUpperCase() + s.slice(1);
   const centre = () => ({ x: Math.round(cam.x), y: Math.round(cam.y) });
-  const dot = c => `<span class="dot" style="background:${RELIC_COLOR[c] || c}"></span>`;
+  const dot = c => `<svg class="grail" viewBox="0 0 20 20"><path d="M3 2H17C17 9 13 11 11.2 11.4V15.5L15 18H5L8.8 15.5V11.4C7 11 3 9 3 2Z" fill="${RELIC_COLOR[c] || c}" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/></svg>`;
 
   function featureText(f) {
     if (!f) return '';
@@ -94,17 +95,14 @@
     const ex = g.canExplore(x, y), fd = g.canFound(x, y);
     const siteReady = g.sites.has(k) && !g.usedSites.has(k);
     let btns = '';
-    btns += `<button class="primary" data-act="explore" ${ex.ok ? '' : 'disabled'} title="${ex.ok ? 'Exploring ends the turn' : ex.reason}">Explore (E) · ${ICON.wealth}${g.res.wealth}${ex.bonus ? ` → +${ex.bonus} tile${ex.bonus > 1 ? 's' : ''}` : ''}</button>`;
-    btns += `<button data-act="found" ${fd.ok ? '' : 'disabled'} title="${fd.ok ? '' : fd.reason}">Found city (F) · ${ICON.food}${fd.cost}</button>`;
+    btns += `<span title="${ex.ok ? 'Exploring ends the turn' : ex.reason}"><button class="primary" data-act="explore" ${ex.ok ? '' : 'disabled'}>Explore (E) · ${ICON.wealth}${g.res.wealth}${ex.bonus ? ` → +${ex.bonus} tile${ex.bonus > 1 ? 's' : ''}` : ''}</button></span>`;
+    // disabled buttons swallow mouse events in some browsers, so the tooltip sits on a wrapper
+    btns += `<span title="${fd.ok ? '' : fd.reason}"><button data-act="found" ${fd.ok ? '' : 'disabled'}>Found city (F) · ${ICON.food}${fd.cost}</button></span>`;
     if (siteReady) btns += `<button class="primary" data-act="site">Activate site (A)</button>`;
-    const why = [];
-    if (!ex.ok) why.push(ex.reason);
-    if (!fd.ok && ti.known) why.push(fd.reason);
     el('info').innerHTML =
       `<h3>${ti.title} <span class="dim">${x},${y}</span></h3>` +
       ti.rows.map(r => `<div class="row">${r}</div>`).join('') +
-      `<div class="btns">${btns}</div>` +
-      (why.length ? `<div class="row dim" style="margin-top:6px">${why.join(' · ')}</div>` : '');
+      `<div class="btns">${btns}</div>`;
   }
 
   function renderProjects() {
@@ -376,8 +374,34 @@
     ctx.fillText(ch, cx, cy);
   }
   function relicDot(color, cx, cy, r) {
-    ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.fillStyle = RELIC_COLOR[color]; ctx.fill();
-    ctx.lineWidth = 2; ctx.strokeStyle = '#fff'; ctx.stroke();
+    const s = r * 1.5; // grail: bowl, stem, base
+    ctx.beginPath();
+    ctx.moveTo(cx - 0.8 * s, cy - 0.9 * s);
+    ctx.lineTo(cx + 0.8 * s, cy - 0.9 * s);
+    ctx.bezierCurveTo(cx + 0.8 * s, cy + 0.1 * s, cx + 0.3 * s, cy + 0.25 * s, cx + 0.12 * s, cy + 0.3 * s);
+    ctx.lineTo(cx + 0.12 * s, cy + 0.65 * s);
+    ctx.lineTo(cx + 0.55 * s, cy + 0.9 * s);
+    ctx.lineTo(cx - 0.55 * s, cy + 0.9 * s);
+    ctx.lineTo(cx - 0.12 * s, cy + 0.65 * s);
+    ctx.lineTo(cx - 0.12 * s, cy + 0.3 * s);
+    ctx.bezierCurveTo(cx - 0.3 * s, cy + 0.25 * s, cx - 0.8 * s, cy + 0.1 * s, cx - 0.8 * s, cy - 0.9 * s);
+    ctx.closePath();
+    ctx.fillStyle = RELIC_COLOR[color]; ctx.fill();
+    ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.strokeStyle = '#fff'; ctx.stroke();
+  }
+  function village(cx, cy, z) { // cluster of medieval cottages; back row first
+    const hut = (x, base, w, h, wall, roof) => {
+      ctx.fillStyle = wall; ctx.fillRect(x - w / 2, base - h, w, h);
+      ctx.beginPath();
+      ctx.moveTo(x - w / 2 - 2 * z, base - h); ctx.lineTo(x, base - h - w * 0.75); ctx.lineTo(x + w / 2 + 2 * z, base - h);
+      ctx.closePath(); ctx.fillStyle = roof; ctx.fill();
+      ctx.fillStyle = '#3b2a1a'; ctx.fillRect(x - 1.5 * z, base - h * 0.55, 3 * z, h * 0.55); // door
+    };
+    hut(cx - 8 * z, cy - 1 * z, 9 * z, 6 * z, '#d9c7a0', '#a8472f');
+    hut(cx + 8 * z, cy - 1 * z, 9 * z, 6 * z, '#cdb88f', '#8f3b28');
+    hut(cx, cy + 9 * z, 11 * z, 8 * z, '#e6d5ae', '#b5532f');
+    hut(cx - 10 * z, cy + 11 * z, 8 * z, 5 * z, '#cdb88f', '#6e4a2c');
+    hut(cx + 10 * z, cy + 11 * z, 8 * z, 5 * z, '#d9c7a0', '#6e4a2c');
   }
   function featureIcon(f, cx, cy, dim, z) {
     ctx.globalAlpha = dim ? 0.5 : 1;
@@ -396,9 +420,17 @@
       const cid = g.claimed.get(k);
       if (cid !== undefined) {
         ctx.strokeStyle = CITY_COLORS[(cid - 1) % CITY_COLORS.length]; ctx.lineWidth = 2;
-        ctx.strokeRect(sx + 1.5, sy + 1.5, TS - 3, TS - 3);
+        ctx.beginPath(); // outline only the sides facing a tile of another city (or unclaimed)
+        if (g.claimed.get(K(x, y - 1)) !== cid) { ctx.moveTo(sx, sy + 1); ctx.lineTo(sx + TS, sy + 1); }
+        if (g.claimed.get(K(x, y + 1)) !== cid) { ctx.moveTo(sx, sy + TS - 1); ctx.lineTo(sx + TS, sy + TS - 1); }
+        if (g.claimed.get(K(x - 1, y)) !== cid) { ctx.moveTo(sx + 1, sy); ctx.lineTo(sx + 1, sy + TS); }
+        if (g.claimed.get(K(x + 1, y)) !== cid) { ctx.moveTo(sx + TS - 1, sy); ctx.lineTo(sx + TS - 1, sy + TS); }
+        ctx.stroke();
       }
       const f = g.feature(x, y);
+      if (!f && !t.site && !bl && !g.cities.some(c => c.x === x && c.y === y)) { // plain tile: faint terrain hint
+        ctx.globalAlpha = 0.22; glyph(TYPE_ICON[t.type], cx, cy, 20 * z); ctx.globalAlpha = 1;
+      }
       if (f) featureIcon(f, cx, cy + (t.site ? 9 : 0) * z, !!bl, z);
       if (t.site) { ctx.globalAlpha = g.usedSites.has(k) ? 0.35 : 1; glyph('\u{1F5FF}', cx, cy - (f ? 9 : 0) * z, 26 * z); ctx.globalAlpha = 1; }
       if (bl) {
@@ -406,7 +438,7 @@
         if (bl.pustule && g.taken.discernment) glyph('☣️', cx, cy, 30 * z);
       }
       const city = g.cities.find(c => c.x === x && c.y === y);
-      if (city) { ctx.beginPath(); ctx.arc(cx, cy, 18 * z, 0, 7); ctx.fillStyle = '#10151b'; ctx.fill(); glyph('\u{1F3E0}', cx, cy + z, 26 * z); }
+      if (city) { village(cx, cy - 1 * z, z); }
     } else {
       const gl = g.glimpse(x, y);
       let frontier = false;

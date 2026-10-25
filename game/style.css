@@ -46,7 +46,7 @@ button.pulse { animation: pulse 1.4s infinite; }
 #tip[hidden] { display: none; }
 .chip[data-tip] { cursor: help; }
 .chip { display: inline-block; padding: 0 8px; margin: 2px 3px 2px 0; border: 1px solid var(--line); border-radius: 999px; font-size: 12px; background: var(--panel2); }
-.dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; border: 1px solid #fff6; vertical-align: -1px; }
+.grail { display: inline-block; width: 14px; height: 14px; margin-right: 4px; vertical-align: -2px; }
 #modal { position: fixed; inset: 0; background: rgba(5,7,10,.72); display: flex; align-items: center; justify-content: center; z-index: 10; }
 #modal[hidden] { display: none; }
 .sheet { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 20px; width: min(920px, 94vw); max-height: 90vh; overflow: auto; }

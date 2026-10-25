@@ -14,28 +14,28 @@ Rules that apply to all of them:
 
 Numbers are **[TUNE]** placeholders. They match the defaults in `04-open-questions.md` (tile bonus = +2 of one resource, city bonus = +1 of each resource).
 
-| Base tile | Name | Bonuses |
-|---|---|---|
-| Plains | Fertile Valley | Tile +2 food |
-| Plains, Desert | Crossroads | Tile +2 wealth |
-| Forest | Old Growth | Tile +2 materials |
-| Mountains | Rich Vein | Tile +2 materials |
-| Mountains | Gold Seam | Tile +2 wealth |
-| Desert | Oasis | Tile +2 food |
-| Ocean | Fishing Banks | Tile +2 food |
-| Ocean | Pearl Beds | Tile +2 wealth |
-| Plains, Forest | Sacred Grove | City +1 food, +1 materials, +1 wealth |
-| Mountains, Forest | Hot Springs | City +1 food, +1 materials, +1 wealth |
+| Base tile                 | Name            | Bonuses                               |
+| ------------------------- | --------------- | ------------------------------------- |
+| Plains                    | Fertile Valley  | Tile +2 food                          |
+| Plains, Desert            | Crossroads      | Tile +2 wealth                        |
+| Forest                    | Old Growth      | Tile +2 materials                     |
+| Mountains                 | Rich Vein       | Tile +2 materials                     |
+| Mountains                 | Gold Seam       | Tile +2 wealth                        |
+| Desert                    | Oasis           | Tile +2 food                          |
+| Ocean                     | Fishing Banks   | Tile +2 food                          |
+| Ocean                     | Pearl Beds      | Tile +2 wealth                        |
+| Plains, Forest            | Sacred Grove    | City +1 food, +1 materials, +1 wealth |
+| Mountains, Forest         | Hot Springs     | City +1 food, +1 materials, +1 wealth |
 | Plains, Desert, Mountains | Natural Harbour | City +1 food, +1 materials, +1 wealth |
-| Ocean, Plains | Tidal Shrine | Relic (blue) |
-| Ocean, Forest | Sunken Idol | Relic (blue) |
-| Forest, Plains | Standing Stones | Relic (green) |
-| Plains, Mountains | Founders' Cairn | Relic (green) |
-| Mountains, Desert | Obsidian Altar | Relic (black) |
-| Desert, Forest | Bone Garden | Relic (black) |
+| Ocean, Plains             | Tidal Shrine    | Relic (blue)                          |
+| Ocean, Forest             | Sunken Idol     | Relic (blue)                          |
+| Forest, Plains            | Standing Stones | Relic (green)                         |
+| Plains, Mountains         | Founders' Cairn | Relic (green)                         |
+| Mountains, Desert         | Obsidian Altar  | Relic (black)                         |
+| Desert, Forest            | Bone Garden     | Relic (black)                         |
 
 ## Notes
 - **Relic count** is the number of relic features of each colour on claimed, non-blighted tiles of your cities.
 - **Omen Reading** reveals that *a* feature exists on a fogged tile, not which one.
 - **Ancient sites** that add "two special features to nearby tiles" pick from this table, respecting the base-tile column.
-- **Desert** is poor, so its features (Oasis, Crossroads, Natural Harbour, the black relics) are the main reason to claim it.
+- **Desert** yields nothing, so its features (Oasis, Crossroads, Natural Harbour, the black relics) are the main reason to claim it.
