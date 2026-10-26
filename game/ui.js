@@ -55,7 +55,7 @@
       `<button data-act="newgame" title="Abandon this world and start a new one">New game</button>` +
       `<span class="pill dim">Cities <b>${p.cities}/${CFG.winCities}</b></span>` +
       `<span class="pill dim">Sites <b>${p.sites}/${CFG.winSites}</b></span>` +
-      `<span class="pill dim">Projects <b>${p.projects}/${CFG.winProjects}</b></span>` +
+      `<span class="pill dim">Ascension <b>${p.ascensions}/${CFG.winAscensions}</b></span>` +
       `<span class="pill ${g.turn >= CFG.blightStart ? 'warn' : 'dim'}">☣ ${g.turn >= CFG.blightStart ? `next pustule: turn ${next}` : `blight begins turn ${CFG.blightStart}`}</span>`;
   }
 
@@ -73,8 +73,9 @@
     const bl = g.blight.get(k);
     const seesBlight = known || (gl && gl.blight);
     if (bl && seesBlight) {
-      rows.push(bl.pustule && g.taken.discernment ? '<span class="warn">☣ Pustule — the source of the blight</span>' : '<span class="warn">☣ Blighted — produces nothing</span>');
+      rows.push(bl.pustule && g.taken.discernment ? '<span class="warn">☣ Pustule — the source of the blight</span>' : `<span class="warn">☣ Blighted — ${g.taken.scavenge && cid ? 'features disabled' : 'produces nothing'}</span>`);
     }
+    if (known && !bl && risk().has(k)) rows.push('<span class="warn">⚠ Blight may spread here next turn</span>');
     if (known) {
       if (cid) rows.push(`Claimed by city #${cid}`);
       rows.push(`Yield: ${fmt(g.tileYield(x, y))}${bl ? ' (blighted)' : ''}`);
@@ -107,7 +108,7 @@
   function renderProjects() {
     const have = Object.keys(g.taken).map(id => ({ p: PROJECTS.find(q => q.id === id), n: g.taken[id] }));
     const avail = g.projectAvailable();
-    let h = `<h3>Projects <span class="dim">${g.projectCount}/${CFG.winProjects}</span></h3>`;
+    let h = `<h3>Projects <span class="dim">${g.projectCount}</span></h3>`;
     h += `<div class="row dim">Next project at ${ICON.materials}${g.threshold} (you have ${g.res.materials})</div>`;
     h += `<div class="btns" style="margin:6px 0 8px"><button data-act="projects" class="${avail ? 'primary pulse' : ''}" ${avail ? '' : 'disabled'}>Choose a project</button></div>`;
     h += RES.length ? `<div class="row dim">Relics in your cities: ${CV.COLORS.map(c => `${dot(c)}${g.relicCount(c)}`).join('  ')}</div>` : '';
@@ -185,7 +186,7 @@
     ['Ancient sites', ['siteOptionCount', 'siteBundleMin', 'siteBundleVariance',
       'siteExploreRadius', 'siteFeatureCount', 'siteFeatureRadius', 'cleanseRadius']],
     ['Blight', ['blightStart', 'blightEvery', 'blightSpawnRange', 'blightSpread']],
-    ['Victory', ['winCities', 'winSites', 'winProjects']],
+    ['Victory', ['winCities', 'winSites', 'winAscensions']],
   ];
   const WORLD_KEYS = new Set(OPTION_GROUPS[4][1]);
   const optLabel = k => cap(k.replace(/([A-Z])/g, ' $1').toLowerCase());
@@ -239,7 +240,7 @@
 
   function showOver() {
     const o = g.over;
-    const how = { cities: 'built enough cities', sites: 'found enough ancient sites', projects: 'finished enough projects' };
+    const how = { cities: 'built enough cities', sites: 'found enough ancient sites', ascension: 'ascended' };
     openModal(`<div class="sheet"><h3>${o.won ? 'You win' : 'The blight took your last city'}</h3>
       <div>${o.won ? `On turn ${o.turn} you ${how[o.how]}.` : `You lasted until turn ${o.turn}.`}</div>
       <div class="btns"><button class="primary" data-act="restart">New world</button></div></div>`, 'over');
@@ -410,6 +411,16 @@
     ctx.globalAlpha = 1;
   }
 
+  // Rot Forecast: cached because drawTile runs for every visible tile
+  const NO_RISK = new Set();
+  let riskCache = null, riskKey = '';
+  function risk() {
+    if (!g.taken.forecast) return NO_RISK;
+    const key = `${g.turn}|${g.blight.size}|${g.known.size}`;
+    if (key !== riskKey) { riskKey = key; riskCache = g.atRisk(); }
+    return riskCache;
+  }
+
   function drawTile(x, y, sx, sy) {
     const k = K(x, y), known = g.known.has(k), t = g.world.tile(x, y);
     const cx = sx + TS / 2, cy = sy + TS / 2, z = TS / 44; // icon scale
@@ -435,6 +446,10 @@
       if (bl) {
         ctx.fillStyle = 'rgba(82,24,105,.82)'; ctx.fillRect(sx, sy, TS, TS);
         if (bl.pustule && g.taken.discernment) glyph('☣️', cx, cy, 30 * z);
+      } else if (risk().has(k)) {
+        ctx.fillStyle = 'rgba(150,60,190,.3)'; ctx.fillRect(sx, sy, TS, TS);
+        ctx.strokeStyle = 'rgba(190,100,230,.8)'; ctx.lineWidth = 2; ctx.setLineDash([5, 4]);
+        ctx.strokeRect(sx + 3, sy + 3, TS - 6, TS - 6); ctx.setLineDash([]);
       }
       const city = g.cities.find(c => c.x === x && c.y === y);
       if (city) { village(cx, cy - 1 * z, z); }

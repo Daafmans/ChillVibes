@@ -33,7 +33,7 @@
 
     // --- Projects ---
     projectBase: 60, projectGrowth: 1.4,          // materials threshold, multiplied by growth after each project
-    projectOfferSize: 4,                          // projects offered each time
+    projectOfferSize: 5,                          // projects offered each time, including Ascension
     legacyPerDistance: 0.05,                      // site benefit scale += this * distance from start, per Legacy copy
     tradeBonus: 1,                                // each of food/materials/wealth per Trade Empire copy per touching city
     gloriousBonus: 3, gloriousRadius: 10,         // per Glorious Capital copy, per other city within the radius
@@ -51,7 +51,7 @@
     blightSpread: 3,                             // tiles gained per pustule per turn
 
     // --- Victory ---
-    winCities: 20, winSites: 20, winProjects: 20,
+    winCities: 20, winSites: 20, winAscensions: 10,
   };
   CV.CFG_DEFAULTS = Object.freeze(Object.assign({}, CV.CFG));
   CV.RES = ['food', 'materials', 'wealth'];
@@ -98,6 +98,9 @@
     desert: {},
   };
   CV.PROJECTS = [
+    // Always offered, repeatable, does not raise the cost of the next project or count as a regular project
+    { id: 'ascension', cat: 'Victory', name: 'Ascension', multi: true, relic: null, ascension: true,
+      get desc() { return `Pick it ${CV.CFG.winAscensions} times to win. Does not raise the cost of the next project.`; } },
     // Vision
     { id: 'openfrontier', cat: 'Vision', name: 'Open Frontier', multi: false, relic: null,
       get desc() { return `Explore any tile within ${CV.CFG.openFrontierRadius} tiles of a city, even if it is not next to known land.`; } },
@@ -125,6 +128,10 @@
       get desc() { return `See blight up to ${CV.CFG.blightSightRange} tile${CV.CFG.blightSightRange === 1 ? '' : 's'} into the fog.`; } },
     { id: 'discernment', cat: 'Blight', name: 'Pustule Discernment', multi: false, relic: { n: 1, color: 'black' },
       desc: 'Tell pustules apart from ordinary blight.' },
+    { id: 'forecast', cat: 'Blight', name: 'Rot Forecast', multi: false, relic: null,
+      desc: 'Explored tiles that blight could spread to next turn are highlighted.' },
+    { id: 'scavenge', cat: 'Blight', name: 'Scavenge the Rot', multi: false, relic: { n: 1, color: 'black' },
+      desc: 'Blighted tiles in your cities still yield 1 food, 1 material and 1 wealth (features stay disabled).' },
     { id: 'fight', cat: 'Blight', name: 'Blight Fight', multi: false, relic: { n: 1, color: 'black' },
       desc: 'Ordinary blight on tiles you explore is cleansed.' },
     { id: 'burst', cat: 'Blight', name: 'Pustule Burst', multi: false, relic: { n: 2, color: 'black' },

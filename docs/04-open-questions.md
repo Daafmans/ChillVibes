@@ -7,7 +7,7 @@ Decisions made while building the vertical slice (`game/`). Everything here is c
 - Project threshold and city cost both grow multiplicatively. Relics are never spent and come from special terrain features.
 - Blight passes through any tile. Pustules spread one tile at a time, so no two sources compete for a tile.
 - Ancient sites offer four options; the fourth is always a resource bundle. None of them cost relics.
-- Win targets are 20 cities / 20 sites / 20 projects. Pustule Burst is one-time. The glimpsed state is always shown.
+- Win targets are 20 cities / 20 sites / 10 Ascensions. Pustule Burst is one-time. The glimpsed state is always shown.
 
 ## Assumptions I made (please confirm or correct)
 1. **Exploration spends all Wealth and widens by it.** Exploring reveals the 3×3 patch plus `floor(wealth / 10)` extra tiles (`exploreWealthPerTile = 10`), then sets Wealth to 0, remainder included. Extras are hidden tiles touching the revealed area, nearest the picked tile first, ties broken by a seeded hash. Exploring with under 10 Wealth is still allowed and just reveals the 3×3.

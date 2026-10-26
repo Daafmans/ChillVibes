@@ -66,7 +66,7 @@ Surveyor's Eye, Omen Reading, Ancient Sight, Blight Sight. Range = `base + step 
 |---|---|---|
 | `projectBase` | 60 | Materials threshold for the first project |
 | `projectGrowth` | 1.4 | Threshold multiplier after each project |
-| `projectOfferSize` | 4 | Projects offered each time |
+| `projectOfferSize` | 5 | Projects offered each time, including the always-offered Ascension |
 | `legacyPerDistance` | 0.05 | Site benefit scale increases by this × distance from start, per Legacy copy |
 | `tradeBonus` | 1 | Each of food/materials/wealth per Trade Empire copy per touching city |
 | `gloriousBonus` | 3 | Per Glorious Capital copy, per other city within the radius |
@@ -99,7 +99,7 @@ Surveyor's Eye, Omen Reading, Ancient Sight, Blight Sight. Range = `base + step 
 |---|---|---|
 | `winCities` | 20 | Cities needed to win |
 | `winSites` | 20 | Ancient sites needed to win |
-| `winProjects` | 20 | Projects needed to win |
+| `winAscensions` | 10 | Times Ascension must be picked to win |
 
 ## Other constants (not in `CV.CFG`)
 
@@ -151,5 +151,7 @@ Surveyor's Eye, Omen Reading, Ancient Sight, Blight Sight. Range = `base + step 
 | Expansion | Glorious Capital | yes | 2 green |
 | Blight | Blight Sight | no | – |
 | Blight | Pustule Discernment | no | 1 black |
+| Blight | Rot Forecast | no | – |
+| Blight | Scavenge the Rot | no | 1 black |
 | Blight | Blight Fight | no | 1 black |
 | Blight | Pustule Burst | no | 2 black |

@@ -227,7 +227,10 @@
     // ---------- economy ----------
     tileYield(x, y) {
       const out = {};
-      if (this.blight.has(K(x, y))) return out;
+      if (this.blight.has(K(x, y))) {
+        if (this.taken.scavenge && this.claimed.has(K(x, y))) RES.forEach(r => out[r] = 1);
+        return out;
+      }
       Object.assign(out, BASE_YIELD[this.world.tile(x, y).type]);
       const f = this.feature(x, y);
       if (f && f.kind === 'tile') for (const r of [].concat(f.res)) out[r] = (out[r] || 0) + f.amount;
@@ -239,9 +242,9 @@
       this.cities.forEach((c, i) => {
         let touch = false;
         for (const t of this.cityTiles.get(c.id) || []) {
-          if (this.blight.has(t.k)) continue;
           const y = this.tileYield(t.x, t.y);
           for (const r in y) tot[r] += y[r];
+          if (this.blight.has(t.k)) continue;
           if (trade && !touch) for (const [dx, dy] of N8) {
             const o = this.claimed.get(K(t.x + dx, t.y + dy));
             if (o !== undefined && o !== c.id) { touch = true; break; }
@@ -267,25 +270,26 @@
     relicsOk(req) { return !req || this.relicCount(req.color) >= req.n; }
 
     // ---------- projects ----------
-    projectAvailable() { return !this.over && this.res.materials >= this.threshold && this.availableProjects().length > 0; }
-    availableProjects() { return PROJECTS.filter(p => p.multi || !this.taken[p.id]); }
+    projectAvailable() { return !this.over && this.res.materials >= this.threshold; }
+    availableProjects() { return PROJECTS.filter(p => !p.ascension && (p.multi || !this.taken[p.id])); }
     projectOffer() {
       if (!this.projectOfferIds) {
-        const rng = CV.mulberry32(this.seed * 13 + this.projectCount * 101 + 5);
+        const rng = CV.mulberry32(this.seed * 13 + (this.projectCount + (this.taken.ascension || 0)) * 101 + 5);
         const pool = this.availableProjects().slice();
         for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
         // at most one offered project may require relics
+        const size = CFG.projectOfferSize - 1;   // Ascension takes the last slot
         const pick = [];
         for (const p of pool) {
-          if (pick.length === CFG.projectOfferSize) break;
+          if (pick.length === size) break;
           if (p.relic && pick.some(q => q.relic)) continue;
           pick.push(p);
         }
         if (pick.length && !pick.some(p => this.relicsOk(p.relic))) {
           const free = pool.find(p => !p.relic && !pick.includes(p));
-          if (free) { if (pick.length < CFG.projectOfferSize) pick.push(free); else pick[pick.length - 1] = free; }
+          if (free) { if (pick.length < size) pick.push(free); else pick[pick.length - 1] = free; }
         }
-        this.projectOfferIds = pick.map(p => p.id);
+        this.projectOfferIds = pick.map(p => p.id).concat('ascension');
       }
       return this.projectOfferIds.map(id => PROJECTS.find(p => p.id === id));
     }
@@ -295,9 +299,11 @@
       if (!p) return { ok: false, reason: 'Not offered' };
       if (!this.relicsOk(p.relic)) return { ok: false, reason: 'Missing relics' };
       this.res.materials -= this.threshold;
-      this.threshold = Math.ceil(this.threshold * CFG.projectGrowth);
       this.taken[id] = (this.taken[id] || 0) + 1;
-      this.projectCount++;
+      if (!p.ascension) {
+        this.threshold = Math.ceil(this.threshold * CFG.projectGrowth);
+        this.projectCount++;
+      }
       this.projectOfferIds = null;
       if (id === 'wider') this.claimAll();
       this.say(`Project: ${p.name}.`);
@@ -385,22 +391,35 @@
       const y = ((k % 131072) + 131072 + 65536) % 131072 - 65536, x = (k - y) / 131072;
       this.blight.set(k, { x, y, pustule: true });
     }
+    // clean tiles next to the blight patch that grows from a pustule
+    blightFront(pk, p) {
+      const seen = new Set([pk]), queue = [p], front = new Map();
+      for (let i = 0; i < queue.length; i++) {
+        const b = queue[i];
+        for (const [dx, dy] of N8) {
+          const x = b.x + dx, y = b.y + dy, k = K(x, y);
+          if (seen.has(k)) continue;
+          seen.add(k);
+          const nb = this.blight.get(k);
+          if (nb) queue.push(nb); else front.set(k, { x, y });
+        }
+      }
+      return front;
+    }
+    // keys of explored tiles that blight could reach next turn (Rot Forecast)
+    atRisk() {
+      const out = new Set();
+      for (const [pk, p] of this.blight) {
+        if (!p.pustule) continue;
+        for (const k of this.blightFront(pk, p).keys()) if (this.known.has(k)) out.add(k);
+      }
+      return out;
+    }
     spreadBlight() {
       const pustules = [...this.blight].filter(([, b]) => b.pustule);
       for (const [pk, p] of pustules) {
         if (!this.blight.has(pk)) continue;
-        const seen = new Set([pk]), queue = [p], front = new Map();
-        for (let i = 0; i < queue.length; i++) {
-          const b = queue[i];
-          for (const [dx, dy] of N8) {
-            const x = b.x + dx, y = b.y + dy, k = K(x, y);
-            if (seen.has(k)) continue;
-            seen.add(k);
-            const nb = this.blight.get(k);
-            if (nb) queue.push(nb); else front.set(k, { x, y });
-          }
-        }
-        const cand = [...front];
+        const cand = [...this.blightFront(pk, p)];
         for (let n = 0; n < CFG.blightSpread && cand.length; n++) {
           const i = Math.floor(this.rng() * cand.length);
           const [k, t] = cand[i]; cand[i] = cand[cand.length - 1]; cand.pop();
@@ -411,13 +430,13 @@
 
     // ---------- turns ----------
     progress() {
-      return { cities: this.cities.length, sites: this.sites.size, projects: this.projectCount };
+      return { cities: this.cities.length, sites: this.sites.size, projects: this.projectCount, ascensions: this.taken.ascension || 0 };
     }
     checkWin() {
       const p = this.progress();
       if (p.cities >= CFG.winCities) return 'cities';
       if (p.sites >= CFG.winSites) return 'sites';
-      if (p.projects >= CFG.winProjects) return 'projects';
+      if (p.ascensions >= CFG.winAscensions) return 'ascension';
       return null;
     }
     endTurn() {
