@@ -59,7 +59,7 @@ Ancient sites are also a **win-condition target** (find a specific number).
 Spent with Materials: each time the threshold is reached, the player picks one of four options. Projects change how the game is played rather than adding percentages. The rules and the full list (Vision, Expansion, Blight) live in `06-projects.md`.
 
 ## 7. Blight (the threat)
-- **Turn 30**, then **every 10 turns**: one **unclaimed tile within 20 tiles of a city** becomes a **pustule**.
+- **Turn 10**, then **every 10 turns**: one **undiscovered tile** (a random hidden tile within 15 tiles of known land) becomes a **pustule**.
 - **Every turn, per pustule:** one regular tile that is adjacent to the pustule, or connected to it through blighted tiles, becomes **blight**.
 - **Blighted tile:** produces **nothing**, and any special feature is **disabled**.
 - If a **city's tile** is blighted, the **city is lost**.

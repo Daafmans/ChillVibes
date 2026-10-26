@@ -16,7 +16,7 @@ All tunable gameplay numbers live in `CV.CFG` in `game/config.js`. Every value i
 |---|---|---|
 | `cityBaseCost` | 40 | Food cost of a city; `cost = ceil(base * growth^(cities-1))` |
 | `cityCostGrowth` | 1.45 | Cost multiplier per existing city |
-| `cityClaimRadius` | 2 | Base border radius (diamond); Wider Borders adds +1 per copy |
+| `cityClaimRadius` | 2 | Base border radius (diamond); Wider Borders also claims the corners of the surrounding square |
 
 ## Exploring
 
@@ -67,7 +67,6 @@ Surveyor's Eye, Omen Reading, Ancient Sight, Blight Sight. Range = `base + step 
 | `projectBase` | 60 | Materials threshold for the first project |
 | `projectGrowth` | 1.4 | Threshold multiplier after each project |
 | `projectOfferSize` | 4 | Projects offered each time |
-| `widerBorderBonus` | 1 | Extra claim radius per Wider Borders copy |
 | `legacyPerDistance` | 0.05 | Site benefit scale increases by this × distance from start, per Legacy copy |
 | `tradeBonus` | 1 | Each of food/materials/wealth per Trade Empire copy per touching city |
 | `gloriousBonus` | 3 | Per Glorious Capital copy, per other city within the radius |
@@ -78,8 +77,6 @@ Surveyor's Eye, Omen Reading, Ancient Sight, Blight Sight. Range = `base + step 
 | Key | Default | Description |
 |---|---|---|
 | `siteOptionCount` | 3 | Benefits offered per site (plus the always-offered bundle) |
-| `siteRelicChance` | 0.7 | Chance one option needs relics |
-| `siteRelicDoubleChance` | 0.3 | Chance a relic option needs 2 rather than 1 |
 | `siteBundleMin` | 8 | Bundle: each resource gets `min + rand * variance` (scaled by Legacy) |
 | `siteBundleVariance` | 8 | See above |
 | `siteExploreRadius` | 4 | The 'explore' benefit reveals this radius around the site |
@@ -91,9 +88,9 @@ Surveyor's Eye, Omen Reading, Ancient Sight, Blight Sight. Range = `base + step 
 
 | Key | Default | Description |
 |---|---|---|
-| `blightStart` | 30 | Turn of the first pustule |
+| `blightStart` | 10 | Turn of the first pustule |
 | `blightEvery` | 10 | A new pustule every N turns |
-| `blightSpawnRadius` | 20 | Pustules appear within this distance of a random city |
+| `blightSpawnRange` | 15 | Pustules appear on undiscovered tiles up to this many tiles (Chebyshev) from known land; effectively capped by `glimpseMax` |
 | `blightSpread` | 3 | Tiles gained per pustule per turn |
 
 ## Victory
@@ -148,7 +145,7 @@ Surveyor's Eye, Omen Reading, Ancient Sight, Blight Sight. Range = `base + step 
 | Vision | Ancient Sight | yes | – |
 | Vision | Seafaring | no | 1 blue |
 | Expansion | Harbour Founding | no | 1 green |
-| Expansion | Wider Borders | yes | – |
+| Expansion | Wider Borders | no | – |
 | Expansion | Legacy of Distance | yes | – |
 | Expansion | Trade Empire | yes | – |
 | Expansion | Glorious Capital | yes | 2 green |

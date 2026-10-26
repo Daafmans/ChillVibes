@@ -181,10 +181,10 @@
     ['World generation (new game)', ['blobMin', 'blobVariance', 'blobFillChance', 'startSafeRadius', 'siteMinDistance',
       'siteChance', 'featureChance', 'landThreshold', 'ringLandChance', 'desertThreshold', 'mountainBelow', 'forestBelow']],
     ['Special features', ['tileFeatureAmount', 'allFeatureAmount']],
-    ['Projects', ['projectBase', 'projectGrowth', 'projectOfferSize', 'widerBorderBonus', 'legacyPerDistance', 'tradeBonus', 'gloriousBonus', 'gloriousRadius']],
-    ['Ancient sites', ['siteOptionCount', 'siteRelicChance', 'siteRelicDoubleChance', 'siteBundleMin', 'siteBundleVariance',
+    ['Projects', ['projectBase', 'projectGrowth', 'projectOfferSize', 'legacyPerDistance', 'tradeBonus', 'gloriousBonus', 'gloriousRadius']],
+    ['Ancient sites', ['siteOptionCount', 'siteBundleMin', 'siteBundleVariance',
       'siteExploreRadius', 'siteFeatureCount', 'siteFeatureRadius', 'cleanseRadius']],
-    ['Blight', ['blightStart', 'blightEvery', 'blightSpawnRadius', 'blightSpread']],
+    ['Blight', ['blightStart', 'blightEvery', 'blightSpawnRange', 'blightSpread']],
     ['Victory', ['winCities', 'winSites', 'winProjects']],
   ];
   const WORLD_KEYS = new Set(OPTION_GROUPS[4][1]);

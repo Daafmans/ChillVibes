@@ -7,7 +7,7 @@
 
     // --- Cities ---
     cityBaseCost: 40, cityCostGrowth: 1.45,       // food; cost = ceil(base * growth^(cities-1))
-    cityClaimRadius: 2,                           // base border radius (diamond); Wider Borders adds +1 per copy
+    cityClaimRadius: 2,                           // base border radius (diamond); Wider Borders also claims the corners of the surrounding square
 
     // --- Exploring ---
     exploreWealthPerTile: 10,                     // exploring spends all wealth; each 10 spent reveals one extra tile
@@ -34,23 +34,21 @@
     // --- Projects ---
     projectBase: 60, projectGrowth: 1.4,          // materials threshold, multiplied by growth after each project
     projectOfferSize: 4,                          // projects offered each time
-    widerBorderBonus: 1,                          // extra claim radius per Wider Borders copy
     legacyPerDistance: 0.05,                      // site benefit scale += this * distance from start, per Legacy copy
     tradeBonus: 1,                                // each of food/materials/wealth per Trade Empire copy per touching city
     gloriousBonus: 3, gloriousRadius: 10,         // per Glorious Capital copy, per other city within the radius
 
     // --- Ancient sites ---
     siteOptionCount: 3,                           // benefits offered per site (plus the always-offered bundle)
-    siteRelicChance: 0.7, siteRelicDoubleChance: 0.3, // chance one option needs relics; chance it needs 2 rather than 1
     siteBundleMin: 8, siteBundleVariance: 8,      // bundle: each resource gets min + rand*variance (scaled by Legacy)
     siteExploreRadius: 4,                         // 'explore' benefit reveals this radius around the site
     siteFeatureCount: 2, siteFeatureRadius: 4,    // 'features' benefit adds this many features within this radius
     cleanseRadius: 30,                            // 'cleanse' benefit removes blight within this radius
 
     // --- Blight ---
-    blightStart: 30, blightEvery: 10,             // first pustule on this turn, then every N turns
-    blightSpawnRadius: 20,                        // pustules appear within this distance of a random city
-    blightSpread: 3,                              // tiles gained per pustule per turn
+    blightStart: 10, blightEvery: 10,             // first pustule on this turn, then every N turns
+    blightSpawnRange: 15,                         // pustules appear on undiscovered tiles up to this far (Chebyshev) from known land; effectively capped by glimpseMax
+    blightSpread: 3,                             // tiles gained per pustule per turn
 
     // --- Victory ---
     winCities: 20, winSites: 20, winProjects: 20,
@@ -114,8 +112,8 @@
     // Expansion
     { id: 'harbour', cat: 'Expansion', name: 'Harbour Founding', multi: false, relic: { n: 1, color: 'green' },
       desc: 'Allows founding cities on water tiles.' },
-    { id: 'wider', cat: 'Expansion', name: 'Wider Borders', multi: true, relic: null,
-      desc: 'Cities claim tiles one extra tile away, including existing cities. The oldest city wins ties.' },
+    { id: 'wider', cat: 'Expansion', name: 'Wider Borders', multi: false, relic: null,
+      desc: 'Cities also claim the corner tiles of their 5x5 block, including existing cities. The oldest city wins ties.' },
     { id: 'legacy', cat: 'Expansion', name: 'Legacy of Distance', multi: true, relic: null,
       desc: 'Ancient site benefits scale with the site’s distance from the starting city.' },
     { id: 'trade', cat: 'Expansion', name: 'Trade Empire', multi: true, relic: null,

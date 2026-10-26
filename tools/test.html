@@ -103,7 +103,7 @@ try {
       assert(r.bonus === Math.floor(w / 10), 'bonus at wealth ' + w + ': ' + r.bonus);
       assert(fresh <= 9 + r.bonus && fresh >= r.bonus + 3, `wealth ${w} revealed ${fresh} new tiles`);
     }
-    g.taken.wider = 1; g.claimAll(); assert(g.claimed.size === 45, 'wider claims 45, got ' + g.claimed.size);
+    g.taken.wider = 1; g.claimAll(); assert(g.claimed.size === 25, 'wider claims 25, got ' + g.claimed.size);
   }
   // idle: how fast does blight kill a lone city?
   for (const seed of [1, 2, 3]) {

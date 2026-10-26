@@ -109,14 +109,13 @@
     }
 
     // ---------- cities ----------
-    borderRadius() { return CFG.cityClaimRadius + CFG.widerBorderBonus * (this.taken.wider || 0); }
     claimAll() {
       this.claimed.clear(); this.cityTiles = new Map();
-      const r = this.borderRadius();
+      const r = CFG.cityClaimRadius, corners = !!this.taken.wider;
       for (const c of this.cities) {
         const arr = []; this.cityTiles.set(c.id, arr);
         for (let dx = -r; dx <= r; dx++) for (let dy = -r; dy <= r; dy++) {
-          if (Math.abs(dx) + Math.abs(dy) > 2 * r - 1) continue;
+          if (!corners && Math.abs(dx) + Math.abs(dy) > 2 * r - 1) continue;
           const x = c.x + dx, y = c.y + dy, k = K(x, y);
           if (this.claimed.has(k)) continue;
           this.claimed.set(k, c.id); arr.push({ x, y, k });
@@ -315,7 +314,6 @@
       const kinds = SITE_KINDS.slice();
       for (let i = kinds.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [kinds[i], kinds[j]] = [kinds[j], kinds[i]]; }
       const opts = kinds.slice(0, CFG.siteOptionCount).map(id => ({ id, req: null }));
-      if (rng() < CFG.siteRelicChance) opts[Math.floor(rng() * opts.length)].req = { n: rng() < CFG.siteRelicDoubleChance ? 2 : 1, color: COLORS[Math.floor(rng() * 3)] };
       const sc = this.legacyScale(s.x, s.y);
       const base = () => Math.round((CFG.siteBundleMin + rng() * CFG.siteBundleVariance) * sc);
       opts.push({ id: 'bundle', req: null, bundle: { food: base(), materials: base(), wealth: base() } });
@@ -326,7 +324,6 @@
     siteOptionStatus(key, opt) {
       const s = this.sites.get(key);
       if (this.usedSites.has(key)) return 'Used';
-      if (!this.relicsOk(opt.req)) return `Needs ${opt.req.n} ${opt.req.color} relic${opt.req.n > 1 ? 's' : ''}`;
       if (opt.id === 'city') { const p = this.placeProblem(s.x, s.y); if (p) return p; }
       return null;
     }
@@ -381,14 +378,12 @@
       return Math.ceil(this.turn / CFG.blightEvery) * CFG.blightEvery;
     }
     spawnPustule() {
-      for (let t = 0; t < 500; t++) {
-        const c = this.cities[Math.floor(this.rng() * this.cities.length)];
-        const r = CFG.blightSpawnRadius;
-        const x = c.x + Math.floor(this.rng() * (2 * r + 1)) - r, y = c.y + Math.floor(this.rng() * (2 * r + 1)) - r, k = K(x, y);
-        if (this.claimed.has(k) || this.blight.has(k)) continue;
-        this.blight.set(k, { x, y, pustule: true });
-        return;
-      }
+      // any undiscovered tile within blightSpawnRange of known land (this.near tracks distance, up to glimpseMax)
+      const hidden = [...this.near].filter(([k, d]) => d <= CFG.blightSpawnRange && !this.known.has(k) && !this.claimed.has(k) && !this.blight.has(k)).map(([k]) => k);
+      if (!hidden.length) return;
+      const k = hidden[Math.floor(this.rng() * hidden.length)];
+      const y = ((k % 131072) + 131072 + 65536) % 131072 - 65536, x = (k - y) / 131072;
+      this.blight.set(k, { x, y, pustule: true });
     }
     spreadBlight() {
       const pustules = [...this.blight].filter(([, b]) => b.pustule);

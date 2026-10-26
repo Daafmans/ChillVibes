@@ -26,7 +26,7 @@
    ├─► Materials buy PROJECTS (rule changes: see 03-systems.md)
    └─► Wealth widens every EXPLORATION
 
- Pressure: BLIGHT spreads from turn 30 on and eats cities.
+ Pressure: BLIGHT spreads from turn 10 on and eats cities.
 ```
 
 ## A turn
@@ -71,7 +71,7 @@
 ## Tension curve
 | Turns | Feel |
 |---|---|
-| 1-29 | Calm. Learn the map, found first cities, begin on projects. |
-| 30+ | The first pustule appears. Clock starts. |
-| 40, 50, ... | A new pustule every 10 turns while the old ones keep spreading. |
+| 1-9 | Calm. Learn the map, found first cities, begin on projects. |
+| 10+ | The first pustule appears. Clock starts. |
+| 20, 30, ... | A new pustule every 10 turns while the old ones keep spreading. |
 | End | Win by reaching a goal, or lose when every city is blighted. |
