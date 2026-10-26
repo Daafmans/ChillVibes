@@ -16,7 +16,7 @@ Decisions made while building the vertical slice (`game/`). Everything here is c
 4. **City cost** = `ceil(40 * 1.45^(owned cities - 1))` Food. Losing a city makes the next one cheaper.
 5. **Ancient site offer** = 3 of the 4 location benefits (explore / two features / free city / cleanse) plus the resource bundle. It is fixed per site, so it can't be rerolled. 70% of sites put a relic requirement (1 or 2 relics, random colour) on one of the first three.
 6. **Relic count** = relic features on claimed, non-blighted tiles of your cities.
-7. **Features:** City bonus = +1 Food, Materials and Wealth for the owning city. Tile bonus = +2 of one resource on that tile. Relics are blue, green or black. The named features and the base tiles they can sit on are listed in `05-special-tiles.md`.
+7. **Features:** Tile bonus = +2 of one resource on that tile, or +1 Food, Materials and Wealth on that tile for the all-resource features. Relics are blue, green or black. The named features and the base tiles they can sit on are listed in `05-special-tiles.md`.
 8. **Legacy of Distance** multiplies site benefits (bundle size and bonus features) by `1 + 0.05 * stacks * distance`.
 9. **Vision projects:** the first copy sees 1 tile into the fog and each extra copy adds 1 (capped at 15).
 10. **Blight Fight** cleanses ordinary blight on the 3×3 you explore. **Pustule Burst** destroys pustules there. Both need to be taken to fully clear an area.

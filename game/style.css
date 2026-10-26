@@ -39,8 +39,8 @@ button { font: inherit; color: var(--text); background: var(--panel2); border: 1
 button:hover:not(:disabled) { border-color: var(--accent); }
 button:disabled { opacity: .45; cursor: default; }
 button.primary { background: var(--accent-bg); border-color: #2f6b52; }
-button.pulse { animation: pulse 1.4s infinite; }
-@keyframes pulse { 50% { box-shadow: 0 0 0 4px rgba(127,209,165,.25); } }
+button.pulse { animation: pulse 1.4s infinite; border-color: var(--accent); }
+@keyframes pulse { 50% { box-shadow: 0 0 0 4px rgba(127,209,165,.35), 0 0 14px rgba(127,209,165,.6); } }
 #tip { position: fixed; z-index: 20; max-width: 260px; padding: 6px 10px; border-radius: 8px; font-size: 12px; line-height: 1.35;
   background: var(--panel2); border: 1px solid var(--line); box-shadow: 0 4px 14px rgba(0,0,0,.4); pointer-events: none; }
 #tip[hidden] { display: none; }

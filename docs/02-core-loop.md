@@ -41,8 +41,6 @@
 	2. Blight advances.
 	3. Loss conditions checked.
 
-**[ASSUMPTION]** The brief says "every turn, choose an uncovered square to explore". I read this as *one exploration per turn*, so each turn has one big decision. Cities, projects and one-time effects don't count against it.
-
 ## Exploration in detail
 - Start: the **whole map is hidden except one square** (the start tile).
 - You choose a **revealed tile that still has hidden neighbours** (see the project that lifts this limit) and **explore from it**: all of its hidden neighbours (8 directions: horizontal, vertical, diagonal) become known.

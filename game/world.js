@@ -16,8 +16,11 @@
     const d = pool[Math.min(pool.length - 1, Math.floor(u * pool.length))];
     const f = { id: d.id, name: d.name, kind: d.kind };
     if (d.kind === 'relic') f.color = d.color;
-    else if (d.kind === 'tile') { f.res = d.res; f.amount = Math.max(1, Math.round(CFG.tileFeatureAmount * scale)); }
-    else f.amount = Math.max(1, Math.round(CFG.cityFeatureAmount * scale));
+    else {
+      f.res = d.res;
+      const base = Array.isArray(d.res) ? CFG.allFeatureAmount : CFG.tileFeatureAmount;
+      f.amount = Math.max(1, Math.round(base * scale));
+    }
     return f;
   };
 

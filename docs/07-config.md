@@ -58,7 +58,7 @@ Surveyor's Eye, Omen Reading, Ancient Sight, Blight Sight. Range = `base + step 
 | Key | Default | Description |
 |---|---|---|
 | `tileFeatureAmount` | 2 | Bonus resource per turn on a claimed `tile` feature |
-| `cityFeatureAmount` | 1 | Bonus of each resource per turn for a `city` feature |
+| `allFeatureAmount` | 1 | Bonus of each resource per turn on a claimed all-resource feature |
 
 ## Projects
 

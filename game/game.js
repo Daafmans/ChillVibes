@@ -231,7 +231,7 @@
       if (this.blight.has(K(x, y))) return out;
       Object.assign(out, BASE_YIELD[this.world.tile(x, y).type]);
       const f = this.feature(x, y);
-      if (f && f.kind === 'tile') out[f.res] = (out[f.res] || 0) + f.amount;
+      if (f && f.kind === 'tile') for (const r of [].concat(f.res)) out[r] = (out[r] || 0) + f.amount;
       return out;
     }
     income() {
@@ -243,8 +243,6 @@
           if (this.blight.has(t.k)) continue;
           const y = this.tileYield(t.x, t.y);
           for (const r in y) tot[r] += y[r];
-          const f = this.feature(t.x, t.y);
-          if (f && f.kind === 'city') RES.forEach(r => tot[r] += f.amount);
           if (trade && !touch) for (const [dx, dy] of N8) {
             const o = this.claimed.get(K(t.x + dx, t.y + dy));
             if (o !== undefined && o !== c.id) { touch = true; break; }

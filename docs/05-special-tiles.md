@@ -1,8 +1,7 @@
 # Special tile features
 
-A special feature sits on top of a tile's **basic type** (see `03-systems.md`, section 3). Every feature gives **one** of three kinds of bonus:
+A special feature sits on top of a tile's **basic type** (see `03-systems.md`, section 3). Every feature gives **one** of two kinds of bonus:
 
-- **City bonus:** extra production for the city that owns the tile. Written as `City +…`.
 - **Tile bonus:** extra production for that tile alone. Written as `Tile +…`.
 - **Relic:** counts toward project relic requirements, in the colour shown. Written as `Relic (colour)`.
 
@@ -12,7 +11,7 @@ Rules that apply to all of them:
 - A feature can only appear on one of the base tiles listed for it.
 - Bonuses are per owning city, so they are only earned once a city has claimed the tile.
 
-Numbers are **[TUNE]** placeholders. They match the defaults in `04-open-questions.md` (tile bonus = +2 of one resource, city bonus = +1 of each resource).
+Numbers are **[TUNE]** placeholders. They match the defaults in `04-open-questions.md` (tile bonus = +2 of one resource, or +1 of each resource for the all-resource features).
 
 | Base tile                 | Name            | Bonuses                               |
 | ------------------------- | --------------- | ------------------------------------- |
@@ -24,9 +23,9 @@ Numbers are **[TUNE]** placeholders. They match the defaults in `04-open-questio
 | Desert                    | Oasis           | Tile +2 food                          |
 | Ocean                     | Fishing Banks   | Tile +2 food                          |
 | Ocean                     | Pearl Beds      | Tile +2 wealth                        |
-| Plains, Forest            | Sacred Grove    | City +1 food, +1 materials, +1 wealth |
-| Mountains, Forest         | Hot Springs     | City +1 food, +1 materials, +1 wealth |
-| Plains, Desert, Mountains | Natural Harbour | City +1 food, +1 materials, +1 wealth |
+| Plains, Forest            | Sacred Grove    | Tile +1 food, +1 materials, +1 wealth |
+| Mountains, Forest         | Hot Springs     | Tile +1 food, +1 materials, +1 wealth |
+| Plains, Desert, Mountains | Natural Harbour | Tile +1 food, +1 materials, +1 wealth |
 | Ocean, Plains             | Tidal Shrine    | Relic (blue)                          |
 | Ocean, Forest             | Sunken Idol     | Relic (blue)                          |
 | Forest, Plains            | Standing Stones | Relic (green)                         |

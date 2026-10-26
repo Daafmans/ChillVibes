@@ -37,8 +37,7 @@
 
   function featureText(f) {
     if (!f) return '';
-    if (f.kind === 'city') return `${f.name}. City bonus: +${f.amount} ${RES.map(r => ICON[r]).join('')} for the owning city`;
-    if (f.kind === 'tile') return `${f.name}. Tile bonus: +${f.amount} ${ICON[f.res]}`;
+    if (f.kind === 'tile') return `${f.name}. Tile bonus: +${f.amount} ${[].concat(f.res).map(r => ICON[r]).join('')}`;
     return `${dot(f.color)}${f.name}. Relic (${f.color})`;
   }
   function reqText(req) { return req ? `${dot(req.color)}${req.n} ${req.color} relic${req.n > 1 ? 's' : ''}` : ''; }
@@ -126,7 +125,7 @@
     save();
     if (g.over) return showOver();
     if (g.projectAvailable() && offerShownFor !== g.projectCount && modalKind === null) {
-      offerShownFor = g.projectCount; openProjects();
+      offerShownFor = g.projectCount; CV.audio.play('projectReady');
     }
   }
 
@@ -181,7 +180,7 @@
     ['Fog glimpses', ['glimpseBase', 'glimpseStep', 'glimpseMax', 'blightSightRange']],
     ['World generation (new game)', ['blobMin', 'blobVariance', 'blobFillChance', 'startSafeRadius', 'siteMinDistance',
       'siteChance', 'featureChance', 'landThreshold', 'ringLandChance', 'desertThreshold', 'mountainBelow', 'forestBelow']],
-    ['Special features', ['tileFeatureAmount', 'cityFeatureAmount']],
+    ['Special features', ['tileFeatureAmount', 'allFeatureAmount']],
     ['Projects', ['projectBase', 'projectGrowth', 'projectOfferSize', 'widerBorderBonus', 'legacyPerDistance', 'tradeBonus', 'gloriousBonus', 'gloriousRadius']],
     ['Ancient sites', ['siteOptionCount', 'siteRelicChance', 'siteRelicDoubleChance', 'siteBundleMin', 'siteBundleVariance',
       'siteExploreRadius', 'siteFeatureCount', 'siteFeatureRadius', 'cleanseRadius']],
@@ -406,7 +405,7 @@
   function featureIcon(f, cx, cy, dim, z) {
     ctx.globalAlpha = dim ? 0.5 : 1;
     if (f.kind === 'relic') relicDot(f.color, cx, cy, 10 * z);
-    else if (f.kind === 'city') glyph('✨', cx, cy, 24 * z);
+    else if (Array.isArray(f.res)) glyph('✨', cx, cy, 24 * z);
     else glyph(ICON[f.res], cx, cy, 24 * z);
     ctx.globalAlpha = 1;
   }

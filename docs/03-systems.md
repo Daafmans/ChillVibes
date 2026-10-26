@@ -1,9 +1,7 @@
 # Systems
 
-Numbers marked **[TUNE]** are placeholders for playtesting.
-
 ## 1. World map
-- Square grid. Each tile has a **basic type** (mountains, plains, forest, ocean, desert), optionally a **special feature**, and may hold an **ancient site**.
+- Square grid. Each tile has a **basic type** (mountains, plains, forest, ocean, desert), optionally a **special feature**, or may hold an **ancient site**.
 - **Procedurally generated** from a seed.
 - **Starting tile:** always forest, mountain or plains.
 - **Starting landmass:** between **50 and 80 tiles**, with **no desert** on it.
@@ -13,15 +11,15 @@ Numbers marked **[TUNE]** are placeholders for playtesting.
 ## 2. Resources (global)
 All resources are **stored and spent globally**, not per city.
 
-| Resource | Spent on |
-|---|---|
-| **Food** | Founding cities |
-| **Materials** | Projects |
-| **Wealth** | Exploration. All of it is spent on each exploration (+1 extra tile per 10) |
+| Resource      | Spent on                                            |
+| ------------- | --------------------------------------------------- |
+| **Food**      | Founding cities                                     |
+| **Materials** | Projects                                            |
+| **Wealth**    | Exploration. All of it is spent on each exploration |
 
 - Every turn, each city adds the yields of **all its claimed tiles**.
 - **Desert** yields nothing.
-- **Plains, forests, mountains and ocean** have the **same total yield (2) with different mixes**. Base yields are kept low so that special features stand out. **[TUNE]** Starting point:
+- **Plains, forests, mountains and ocean** have the **same total yield (2) with different mixes**. Base yields are kept low so that special features stand out.
   - Plains: 1 food, 1 wealth
   - Forest: 1 food, 1 material
   - Mountains: 1 material, 1 wealth
@@ -29,9 +27,8 @@ All resources are **stored and spent globally**, not per city.
 
 ## 3. Special features
 Some tiles carry a special feature on top of the basic type. A feature gives **one** of:
-1. **City bonus:** extra total production for the city that owns the tile.
-2. **Tile bonus:** extra production for that tile alone.
-3. **Relic:** required by some projects.
+1. **Tile bonus:** extra production for that tile alone (one resource, or a bit of each).
+2. **Relic:** required by some projects.
 
 Features are **disabled** while the tile is blighted. Some projects reveal that a feature exists without its type.
 

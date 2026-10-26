@@ -28,8 +28,8 @@
     mountainBelow: 0.32, forestBelow: 0.66,       // land noise bands: mountains < forest < plains
 
     // --- Special features ---
-    tileFeatureAmount: 2,                         // bonus resource per turn on a claimed 'tile' feature
-    cityFeatureAmount: 1,                         // bonus of each resource per turn for a 'city' feature
+    tileFeatureAmount: 2,                         // bonus resource per turn on a claimed single-resource feature
+    allFeatureAmount: 1,                          // bonus of each resource per turn on a claimed all-resource feature
 
     // --- Projects ---
     projectBase: 60, projectGrowth: 1.4,          // materials threshold, multiplied by growth after each project
@@ -58,7 +58,7 @@
   CV.CFG_DEFAULTS = Object.freeze(Object.assign({}, CV.CFG));
   CV.RES = ['food', 'materials', 'wealth'];
   CV.COLORS = ['blue', 'green', 'black'];
-  // Special features (docs/05-special-tiles.md). kind: tile (+2 of res on the tile), city (+1 of each for the owner), relic.
+  // Special features (docs/05-special-tiles.md). kind: tile (bonus on the tile; res is one resource or an array of them), relic.
   CV.FEATURES = [
     { id: 'fertileValley', name: 'Fertile Valley', on: ['plains'], kind: 'tile', res: 'food' },
     { id: 'crossroads', name: 'Crossroads', on: ['plains', 'desert'], kind: 'tile', res: 'wealth' },
@@ -68,9 +68,9 @@
     { id: 'oasis', name: 'Oasis', on: ['desert'], kind: 'tile', res: 'food' },
     { id: 'fishingBanks', name: 'Fishing Banks', on: ['ocean'], kind: 'tile', res: 'food' },
     { id: 'pearlBeds', name: 'Pearl Beds', on: ['ocean'], kind: 'tile', res: 'wealth' },
-    { id: 'sacredGrove', name: 'Sacred Grove', on: ['plains', 'forest'], kind: 'city' },
-    { id: 'hotSprings', name: 'Hot Springs', on: ['mountains', 'forest'], kind: 'city' },
-    { id: 'naturalHarbour', name: 'Natural Harbour', on: ['plains', 'desert', 'mountains'], kind: 'city' },
+    { id: 'sacredGrove', name: 'Sacred Grove', on: ['plains', 'forest'], kind: 'tile', res: CV.RES },
+    { id: 'hotSprings', name: 'Hot Springs', on: ['mountains', 'forest'], kind: 'tile', res: CV.RES },
+    { id: 'naturalHarbour', name: 'Natural Harbour', on: ['plains', 'desert', 'mountains'], kind: 'tile', res: CV.RES },
     { id: 'tidalShrine', name: 'Tidal Shrine', on: ['ocean', 'plains'], kind: 'relic', color: 'blue' },
     { id: 'sunkenIdol', name: 'Sunken Idol', on: ['ocean', 'forest'], kind: 'relic', color: 'blue' },
     { id: 'standingStones', name: 'Standing Stones', on: ['forest', 'plains'], kind: 'relic', color: 'green' },
