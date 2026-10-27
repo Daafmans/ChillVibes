@@ -332,7 +332,13 @@
     if (!t) return;
     tip.textContent = t.dataset.tip; tip.hidden = false; placeTip(e);
   });
-  document.addEventListener('pointermove', e => { if (!tip.hidden) placeTip(e); });
+  document.addEventListener('pointermove', e => {
+    if (tip.hidden) return;
+    // the hovered element can be removed (modal closed, panel re-rendered) without a pointerout
+    const t = e.target.closest && e.target.closest('[data-tip]');
+    if (!t) { tip.hidden = true; return; }
+    tip.textContent = t.dataset.tip; placeTip(e);
+  });
   document.addEventListener('pointerout', e => {
     const t = e.target.closest && e.target.closest('[data-tip]');
     if (t && !t.contains(e.relatedTarget)) tip.hidden = true;
@@ -512,8 +518,8 @@
   }
 
   function drawArrows() {
-    // the HUD floats over the canvas, so keep arrows inside the part of the map that is actually visible
-    const top = el('top').offsetHeight + 20, bottom = H - el('panel').offsetHeight - 20, m = 28;
+    // the top bar floats over the canvas, so keep arrows inside the part of the map that is actually visible
+    const top = el('top').offsetHeight + 20, bottom = H - 20, m = 28;
     arrowHits = [];
     for (const [k, s] of g.sites) {
       if (g.siteUsed(k)) continue;
