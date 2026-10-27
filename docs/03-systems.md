@@ -9,15 +9,15 @@
 - Knowledge states per tile: **hidden**, **known** (explored), and, with projects, **glimpsed** (partial information from the fog, see `06-projects.md`).
 
 ## 2. Resources (global)
-All resources are **stored and spent globally**, not per city.
+All resources are **stored and spent globally**, not per settlement.
 
 | Resource      | Spent on                                            |
 | ------------- | --------------------------------------------------- |
-| **Food**      | Founding cities                                     |
+| **Food**      | Founding settlements                                     |
 | **Materials** | Projects                                            |
 | **Wealth**    | Exploration. All of it is spent on each exploration |
 
-- Every turn, each city adds the yields of **all its claimed tiles**.
+- Every turn, each settlement adds the yields of **all its claimed tiles**.
 - **Desert** yields nothing.
 - **Plains, forests, mountains and ocean** have the **same total yield (2) with different mixes**. Base yields are kept low so that special features stand out.
   - Plains: 1 food, 1 wealth
@@ -34,14 +34,14 @@ Features are **disabled** while the tile is blighted. Some projects reveal that 
 
 The full list (which base tiles each feature can appear on, its name and its bonuses) lives in `05-special-tiles.md`.
 
-## 4. Cities
+## 4. Settlements
 - **Cost:** Food. **Instant**.
 - **Footprint:** 5×5 square minus the four corners = **21 tiles**.
-- **Claiming:** a tile can belong to **one city only**, permanently, unless the city is lost. When the city is lost, the tiles become free.
+- **Claiming:** a tile can belong to **one settlement only**, permanently, unless the settlement is lost. When the settlement is lost, the tiles become free.
 - **Placement rules:** not on claimed tiles, not on pustules or blight, not on water (until a project allows it).
-- **Production:** each turn, each city yields the sum of its claimed tiles.
-- **Loss:** if the city's own tile turns to blight, the city is lost.
-- A **free city** can come from an ancient site.
+- **Production:** each turn, each settlement yields the sum of its claimed tiles.
+- **Loss:** if the settlement's own tile turns to blight, the settlement is lost.
+- A **free settlement** can come from an ancient site.
 - **Exploration**: Claimed tiles are automatically and instantly explored
 
 ## 5. Ancient sites
@@ -50,35 +50,35 @@ Found by exploring. Once found, the player can activate it once, at any time, to
 Benefits:
 - Instantly explore a large area around the site
 - Two special features added to some nearby tiles
-- A free city on the site tile
+- A free settlement on the site tile
 - **Cleanse:** eliminate all blight, including pustules, within **30 tiles** of the site
 
 Ancient sites are also a **win-condition target** (find a specific number).
 
 ## 6. Projects
-Spent with Materials: each time the threshold is reached, the player picks one of four options. Projects change how the game is played rather than adding percentages. The rules and the full list (Vision, Expansion, Blight) live in `06-projects.md`.
+Spent with Materials: each time the threshold is reached, the player picks any unlocked project from the project tree (plus Ascension). Projects change how the game is played rather than adding percentages. The rules and the project tree live in `06-projects.md`.
 
 ## 7. Blight (the threat)
 - **Turn 10**, then **every 10 turns**: one **undiscovered tile** (a random hidden tile within 15 tiles of known land) becomes a **pustule**.
 - **Every turn, per pustule:** one regular tile that is adjacent to the pustule, or connected to it through blighted tiles, becomes **blight**.
 - **Blighted tile:** produces **nothing**, and any special feature is **disabled**.
-- If a **city's tile** is blighted, the **city is lost**.
-- **No cities** on pustules or blight.
+- If a **settlement's tile** is blighted, the **settlement is lost**.
+- **No settlements** on pustules or blight.
 - **Pustules look the same as blight** until a project lets the player tell them apart.
 - **Cleansing:** only ancient-site benefits clear blight (30 tile radius).
 
 Why it works:
-- It makes standing still lose slowly, which pushes exploration (to find sites that cleanse) and expansion (to survive losing cities).
+- It makes standing still lose slowly, which pushes exploration (to find sites that cleanse) and expansion (to survive losing settlements).
 - Pustules that look like blight make the fix a guessing game until the player invests in the right project.
 
 **[TUNE]** The spread rate grows with every pustule, and each new pustule adds another spreader, so growth is roughly linear in pustule count per turn and quadratic-ish overall. Simulate this early.
 
 ## 8. Win and loss
 **Win** by any one of:
-- Have **X cities**
+- Have **X settlements**
 - Find **Y ancient sites**
 - Finish **Z projects**
 
-**Lose** when **all your cities** are turned to blight.
+**Lose** when **all your settlements** are turned to blight.
 
 X, Y and Z are configurable per game (difficulty setting).

@@ -1,6 +1,6 @@
 (function (CV) {
   const { K, CFG, RES, COLORS, N8, BASE_YIELD, PROJECTS, cheb } = CV;
-  const SITE_KINDS = ['explore', 'features', 'city', 'cleanse'];
+  const SITE_KINDS = ['explore', 'features', 'settlement', 'cleanse'];
 
   class Game {
     constructor(seed) {
@@ -9,10 +9,10 @@
       this.rng = CV.mulberry32(seed * 31 + 7);
       this.turn = 1;
       this.res = { food: CFG.startFood, materials: CFG.startMaterials, wealth: CFG.startWealth };
-      this.cities = [];
-      this.nextCityId = 1;
-      this.claimed = new Map();     // tile key -> city id
-      this.cityTiles = new Map();   // city id -> [{x,y,k}]
+      this.settlements = [];
+      this.nextSettlementId = 1;
+      this.claimed = new Map();     // tile key -> settlement id
+      this.settlementTiles = new Map();   // settlement id -> [{x,y,k}]
       this.known = new Set();
       this.near = new Map();        // hidden tile key -> Chebyshev distance to nearest known tile (<= glimpseMax)
       this.sites = new Map();       // found ancient sites: key -> {x,y}
@@ -24,11 +24,10 @@
       this.taken = {};              // project id -> times taken
       this.projectCount = 0;
       this.threshold = CFG.projectBase;
-      this.projectOfferIds = null;
       this.exploredThisTurn = false;
       this.over = null;
       this.log = [];
-      this.addCity(0, 0);
+      this.addSettlement(0, 0);
     }
 
     // ---------- persistence ----------
@@ -36,21 +35,21 @@
     serialize() {
       return {
         seed: this.seed, rng: this.rng.getState(), turn: this.turn, res: this.res,
-        cities: this.cities, nextCityId: this.nextCityId,
+        settlements: this.settlements, nextSettlementId: this.nextSettlementId,
         known: [...this.known], near: [...this.near], sites: [...this.sites], usedSites: [...this.usedSites],
         deferredSites: [...this.deferredSites], overrides: [...this.overrides], blight: [...this.blight], taken: this.taken,
-        projectCount: this.projectCount, threshold: this.threshold, projectOfferIds: this.projectOfferIds,
+        projectCount: this.projectCount, threshold: this.threshold,
         exploredThisTurn: this.exploredThisTurn, over: this.over, log: this.log,
       };
     }
     static restore(s) {
       const g = new Game(s.seed);
       g.rng.setState(s.rng); g.turn = s.turn; g.res = s.res;
-      g.cities = s.cities; g.nextCityId = s.nextCityId;
+      g.settlements = s.settlements; g.nextSettlementId = s.nextSettlementId;
       g.known = new Set(s.known); g.near = new Map(s.near); g.sites = new Map(s.sites); g.usedSites = new Set(s.usedSites);
       g.deferredSites = new Set(s.deferredSites || []);
       g.overrides = new Map(s.overrides); g.blight = new Map(s.blight); g.taken = s.taken;
-      g.projectCount = s.projectCount; g.threshold = s.threshold; g.projectOfferIds = s.projectOfferIds;
+      g.projectCount = s.projectCount; g.threshold = s.threshold;
       g.exploredThisTurn = s.exploredThisTurn; g.over = s.over; g.log = s.log;
       g.claimAll();
       return g;
@@ -108,12 +107,12 @@
       return (g.type || g.feature || g.site || g.blight) ? g : null;
     }
 
-    // ---------- cities ----------
+    // ---------- settlements ----------
     claimAll() {
-      this.claimed.clear(); this.cityTiles = new Map();
-      const r = CFG.cityClaimRadius, corners = !!this.taken.wider;
-      for (const c of this.cities) {
-        const arr = []; this.cityTiles.set(c.id, arr);
+      this.claimed.clear(); this.settlementTiles = new Map();
+      const r = CFG.settlementClaimRadius, corners = !!this.taken.wider;
+      for (const c of this.settlements) {
+        const arr = []; this.settlementTiles.set(c.id, arr);
         for (let dx = -r; dx <= r; dx++) for (let dy = -r; dy <= r; dy++) {
           if (!corners && Math.abs(dx) + Math.abs(dy) > 2 * r - 1) continue;
           const x = c.x + dx, y = c.y + dy, k = K(x, y);
@@ -123,11 +122,11 @@
         }
       }
     }
-    addCity(x, y) {
-      this.cities.push({ id: this.nextCityId++, x, y, founded: this.turn });
+    addSettlement(x, y) {
+      this.settlements.push({ id: this.nextSettlementId++, x, y, founded: this.turn });
       this.claimAll();
     }
-    cityCost() { return Math.ceil(CFG.cityBaseCost * Math.pow(CFG.cityCostGrowth, Math.max(0, this.cities.length - 1))); }
+    settlementCost() { return Math.ceil(CFG.settlementBaseCost * Math.pow(CFG.settlementCostGrowth, Math.max(0, this.settlements.length - 1))); }
     placeProblem(x, y) {
       const k = K(x, y);
       if (!this.known.has(k)) return 'Unexplored';
@@ -137,7 +136,7 @@
       return null;
     }
     canFound(x, y) {
-      const cost = this.cityCost();
+      const cost = this.settlementCost();
       if (this.over) return { ok: false, cost, reason: 'Game over' };
       const p = this.placeProblem(x, y);
       if (p) return { ok: false, cost, reason: p };
@@ -148,8 +147,8 @@
       const c = this.canFound(x, y);
       if (!c.ok) return c;
       this.res.food -= c.cost;
-      this.addCity(x, y);
-      this.say(`City founded at ${x},${y}.`);
+      this.addSettlement(x, y);
+      this.say(`Settlement founded at ${x},${y}.`);
       return c;
     }
 
@@ -190,7 +189,7 @@
       let unknownIn3x3 = !known;
       for (const [dx, dy] of N8) if (!this.known.has(K(x + dx, y + dy))) unknownIn3x3 = true;
       const open = this.taken.openfrontier && unknownIn3x3 &&
-        this.cities.some(c => cheb(c.x, c.y, x, y) <= CFG.openFrontierRadius);
+        this.settlements.some(c => cheb(c.x, c.y, x, y) <= CFG.openFrontierRadius);
       // normally exploration starts from a revealed tile that still has hidden neighbours
       if (!(known && unknownIn3x3) && !open) {
         return { ok: false, cost, reason: known ? 'Nothing hidden next to this tile' : 'Explore from a revealed tile' };
@@ -239,9 +238,9 @@
     income() {
       const tot = { food: 0, materials: 0, wealth: 0 };
       const trade = this.taken.trade || 0, glor = this.taken.glorious || 0;
-      this.cities.forEach((c, i) => {
+      this.settlements.forEach((c, i) => {
         let touch = false;
-        for (const t of this.cityTiles.get(c.id) || []) {
+        for (const t of this.settlementTiles.get(c.id) || []) {
           const y = this.tileYield(t.x, t.y);
           for (const r in y) tot[r] += y[r];
           if (this.blight.has(t.k)) continue;
@@ -252,7 +251,7 @@
         }
         if (trade && touch) RES.forEach(r => tot[r] += CFG.tradeBonus * trade);
         if (glor && i === 0) {
-          const n = this.cities.filter(o => o !== c && cheb(o.x, o.y, c.x, c.y) <= CFG.gloriousRadius).length;
+          const n = this.settlements.filter(o => o !== c && cheb(o.x, o.y, c.x, c.y) <= CFG.gloriousRadius).length;
           RES.forEach(r => tot[r] += CFG.gloriousBonus * glor * n);
         }
       });
@@ -260,7 +259,7 @@
     }
     relicCount(color) {
       let n = 0;
-      for (const tiles of this.cityTiles.values()) for (const t of tiles) {
+      for (const tiles of this.settlementTiles.values()) for (const t of tiles) {
         if (this.blight.has(t.k)) continue;
         const f = this.feature(t.x, t.y);
         if (f && f.kind === 'relic' && f.color === color) n++;
@@ -271,27 +270,11 @@
 
     // ---------- projects ----------
     projectAvailable() { return !this.over && this.res.materials >= this.threshold; }
-    availableProjects() { return PROJECTS.filter(p => !p.ascension && (p.multi || !this.taken[p.id])); }
+    unlocked(p) { return !p.parent || !!this.taken[p.parent]; }
+    // Tree: roots plus children of taken projects; one-time projects drop out once taken. Ascension is always last.
     projectOffer() {
-      if (!this.projectOfferIds) {
-        const rng = CV.mulberry32(this.seed * 13 + (this.projectCount + (this.taken.ascension || 0)) * 101 + 5);
-        const pool = this.availableProjects().slice();
-        for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
-        // at most one offered project may require relics
-        const size = CFG.projectOfferSize - 1;   // Ascension takes the last slot
-        const pick = [];
-        for (const p of pool) {
-          if (pick.length === size) break;
-          if (p.relic && pick.some(q => q.relic)) continue;
-          pick.push(p);
-        }
-        if (pick.length && !pick.some(p => this.relicsOk(p.relic))) {
-          const free = pool.find(p => !p.relic && !pick.includes(p));
-          if (free) { if (pick.length < size) pick.push(free); else pick[pick.length - 1] = free; }
-        }
-        this.projectOfferIds = pick.map(p => p.id).concat('ascension');
-      }
-      return this.projectOfferIds.map(id => PROJECTS.find(p => p.id === id));
+      const tree = PROJECTS.filter(p => !p.ascension && this.unlocked(p) && (p.multi || !this.taken[p.id]));
+      return tree.concat(PROJECTS.filter(p => p.ascension));
     }
     chooseProject(id) {
       if (!this.projectAvailable()) return { ok: false, reason: 'Not enough materials' };
@@ -304,7 +287,6 @@
         this.threshold = Math.ceil(this.threshold * CFG.projectGrowth);
         this.projectCount++;
       }
-      this.projectOfferIds = null;
       if (id === 'wider') this.claimAll();
       this.say(`Project: ${p.name}.`);
       return { ok: true };
@@ -330,7 +312,7 @@
     siteOptionStatus(key, opt) {
       const s = this.sites.get(key);
       if (this.usedSites.has(key)) return 'Used';
-      if (opt.id === 'city') { const p = this.placeProblem(s.x, s.y); if (p) return p; }
+      if (opt.id === 'settlement') { const p = this.placeProblem(s.x, s.y); if (p) return p; }
       return null;
     }
     deferSite(key) {
@@ -364,9 +346,9 @@
           placed++;
         }
         this.say('Ancient site: two special features appeared nearby.');
-      } else if (opt.id === 'city') {
-        this.addCity(s.x, s.y);
-        this.say(`Ancient site: a free city at ${s.x},${s.y}.`);
+      } else if (opt.id === 'settlement') {
+        this.addSettlement(s.x, s.y);
+        this.say(`Ancient site: a free settlement at ${s.x},${s.y}.`);
       } else if (opt.id === 'cleanse') {
         let n = 0;
         for (const [k, b] of [...this.blight]) if (cheb(b.x, b.y, s.x, s.y) <= CFG.cleanseRadius) { this.blight.delete(k); n++; }
@@ -430,11 +412,11 @@
 
     // ---------- turns ----------
     progress() {
-      return { cities: this.cities.length, sites: this.sites.size, projects: this.projectCount, ascensions: this.taken.ascension || 0 };
+      return { settlements: this.settlements.length, sites: this.sites.size, projects: this.projectCount, ascensions: this.taken.ascension || 0 };
     }
     checkWin() {
       const p = this.progress();
-      if (p.cities >= CFG.winCities) return 'cities';
+      if (p.settlements >= CFG.winSettlements) return 'settlements';
       if (p.sites >= CFG.winSites) return 'sites';
       if (p.ascensions >= CFG.winAscensions) return 'ascension';
       return null;
@@ -447,13 +429,13 @@
         this.spawnPustule(); this.say('Blight stirs somewhere in the world...');
       }
       this.spreadBlight();
-      for (const c of [...this.cities]) {
+      for (const c of [...this.settlements]) {
         if (this.blight.has(K(c.x, c.y))) {
-          this.cities.splice(this.cities.indexOf(c), 1);
-          this.say(`The city at ${c.x},${c.y} was lost to blight!`);
+          this.settlements.splice(this.settlements.indexOf(c), 1);
+          this.say(`The settlement at ${c.x},${c.y} was lost to blight!`);
         }
       }
-      if (!this.cities.length) { this.over = { won: false, turn: this.turn }; return; }
+      if (!this.settlements.length) { this.over = { won: false, turn: this.turn }; return; }
       this.claimAll();
       this.turn++;
       this.exploredThisTurn = false;

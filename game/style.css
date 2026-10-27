@@ -56,6 +56,28 @@ button.pulse { animation: pulse 1.4s infinite; border-color: var(--accent); }
 .card .cat { font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: .06em; }
 .card .need { margin-top: 6px; font-size: 12px; }
 .ok { color: var(--accent); }
+/* project tree: grows left to right, connectors drawn from each .kid */
+.ptrees { margin: 12px 0; display: flex; flex-direction: column; gap: 16px; overflow-x: auto; }
+.ptree h4 { margin: 0 0 6px; font-size: 12px; color: var(--dim); text-transform: uppercase; letter-spacing: .06em; }
+.ptree > .branch { margin-bottom: 8px; }
+.branch { display: flex; align-items: center; }
+.kids { position: relative; display: flex; flex-direction: column; padding-left: 14px; }
+.kids::before { content: ''; position: absolute; left: 0; top: 50%; width: 14px; border-top: 2px solid var(--line); }
+.kid { position: relative; padding: 4px 0 4px 14px; }
+.kid::before { content: ''; position: absolute; left: 0; top: 50%; width: 14px; border-top: 2px solid var(--line); }
+.kid::after { content: ''; position: absolute; left: 0; top: 0; bottom: 0; border-left: 2px solid var(--line); }
+.kid:first-child::after { top: 50%; }
+.kid:last-child::after { bottom: 50%; }
+.kid:only-child::after { display: none; }
+.pnode { flex: none; width: 150px; min-height: 44px; padding: 7px 10px; text-align: left; border-radius: 10px; cursor: help;
+  background: var(--panel2); border: 1px solid var(--line); }
+.pnode .t { font-weight: 600; font-size: 13px; }
+.pnode .sub { font-size: 11px; }
+.pnode.locked { opacity: .45; }
+.pnode.done { border-color: #2f6b52; color: var(--dim); }
+.pnode.short { border-style: dashed; }
+button.pnode.open { cursor: pointer; background: var(--accent-bg); border-color: var(--accent); }
+button.pnode.open:hover { box-shadow: 0 0 10px rgba(127,209,165,.5); }
 .optgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px 24px; margin: 12px 0; }
 .optgroup h4 { margin: 0 0 4px; font-size: 13px; color: var(--dim); text-transform: uppercase; letter-spacing: .06em; }
 .opt { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 2px 6px; border-radius: 6px; }

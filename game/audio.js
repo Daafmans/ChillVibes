@@ -44,7 +44,7 @@
     // Short two-note chime: a project is available.
     projectReady() { tone(783.99, 0, 0.25, { type: 'sine', gain: 0.35 }); tone(1174.66, 0.12, 0.45, { type: 'sine', gain: 0.35 }); },
     // Two low thuds, like stones being set down.
-    city() { tone([220, 110], 0, 0.18, { type: 'square', gain: 0.25 }); tone([330, 165], 0.12, 0.25, { type: 'square', gain: 0.25 }); tone(659.25, 0.2, 0.3, { type: 'triangle', gain: 0.25 }); },
+    settlement() { tone([220, 110], 0, 0.18, { type: 'square', gain: 0.25 }); tone([330, 165], 0.12, 0.25, { type: 'square', gain: 0.25 }); tone(659.25, 0.2, 0.3, { type: 'triangle', gain: 0.25 }); },
     // Soft upward sweep.
     explore() { tone([300, 900], 0, 0.35, { type: 'sine', gain: 0.3 }); tone([450, 1350], 0.05, 0.3, { type: 'sine', gain: 0.12 }); },
     // Sweep plus a bright shimmer of sparkles.

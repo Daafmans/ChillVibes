@@ -6,7 +6,7 @@
   const TYPE_ICON = { plains: '\u{1F33F}', forest: '\u{1F332}', mountains: '⛰️', desert: '\u{1F335}', ocean: '\u{1F30A}' };
   const TYPE_COLOR ={ plains: '#a9c46c', forest: '#4f8a4b', mountains: '#8a8f99', desert: '#d9c48a', ocean: '#3f78b5' };
   const RELIC_COLOR = { blue: '#4aa3ff', green: '#5be37d', black: '#15151a' };
-  const CITY_COLORS = ['#ffd166', '#ef8354', '#9d8df1', '#4fd0d0', '#f28fad', '#b8e986', '#f6e27a', '#6ea8ff'];
+  const SETTLEMENT_COLORS = ['#ffd166', '#ef8354', '#9d8df1', '#4fd0d0', '#f28fad', '#b8e986', '#f6e27a', '#6ea8ff'];
   const el = id => document.getElementById(id);
   const canvas = el('map'), ctx = canvas.getContext('2d');
 
@@ -53,7 +53,7 @@
       `<span class="grow"></span>` +
       `<button data-act="options" title="Tweak gameplay values">Options</button>` +
       `<button data-act="newgame" title="Abandon this world and start a new one">New game</button>` +
-      `<span class="pill dim">Cities <b>${p.cities}/${CFG.winCities}</b></span>` +
+      `<span class="pill dim">Settlements <b>${p.settlements}/${CFG.winSettlements}</b></span>` +
       `<span class="pill dim">Sites <b>${p.sites}/${CFG.winSites}</b></span>` +
       `<span class="pill dim">Ascension <b>${p.ascensions}/${CFG.winAscensions}</b></span>` +
       `<span class="pill ${g.turn >= CFG.blightStart ? 'warn' : 'dim'}">☣ ${g.turn >= CFG.blightStart ? `next pustule: turn ${next}` : `blight begins turn ${CFG.blightStart}`}</span>`;
@@ -68,8 +68,8 @@
     else if (gl && gl.type) title = `${cap(t.type)} (glimpsed)`;
     else title = 'Unexplored';
     const cid = g.claimed.get(k);
-    const city = g.cities.find(c => c.x === x && c.y === y);
-    if (city) title = `City #${city.id} — ${cap(t.type)}`;
+    const settlement = g.settlements.find(c => c.x === x && c.y === y);
+    if (settlement) title = `Settlement #${settlement.id} — ${cap(t.type)}`;
     const bl = g.blight.get(k);
     const seesBlight = known || (gl && gl.blight);
     if (bl && seesBlight) {
@@ -77,7 +77,7 @@
     }
     if (known && !bl && risk().has(k)) rows.push('<span class="warn">⚠ Blight may spread here next turn</span>');
     if (known) {
-      if (cid) rows.push(`Claimed by city #${cid}`);
+      if (cid) rows.push(`Claimed by settlement #${cid}`);
       rows.push(`Yield: ${fmt(g.tileYield(x, y))}${bl ? ' (blighted)' : ''}`);
       const f = g.feature(x, y);
       if (f) rows.push(featureText(f) + (bl ? ' <span class="warn">(disabled)</span>' : ''));
@@ -97,7 +97,7 @@
     let btns = '';
     btns += `<span title="${ex.ok ? 'Exploring ends the turn' : ex.reason}"><button class="primary" data-act="explore" ${ex.ok ? '' : 'disabled'}>Explore (E) · ${ICON.wealth}${g.res.wealth}${ex.bonus ? ` → +${ex.bonus} tile${ex.bonus > 1 ? 's' : ''}` : ''}</button></span>`;
     // disabled buttons swallow mouse events in some browsers, so the tooltip sits on a wrapper
-    btns += `<span title="${fd.ok ? '' : fd.reason}"><button data-act="found" ${fd.ok ? '' : 'disabled'}>Found city (F) · ${ICON.food}${fd.cost}</button></span>`;
+    btns += `<span title="${fd.ok ? '' : fd.reason}"><button data-act="found" ${fd.ok ? '' : 'disabled'}>Found settlement (F) · ${ICON.food}${fd.cost}</button></span>`;
     if (siteReady) btns += `<button class="primary" data-act="site">Activate site (A)</button>`;
     el('info').innerHTML =
       `<h3>${ti.title} <span class="dim">${x},${y}</span></h3>` +
@@ -111,7 +111,7 @@
     let h = `<h3>Projects <span class="dim">${g.projectCount}</span></h3>`;
     h += `<div class="row dim">Next project at ${ICON.materials}${g.threshold} (you have ${g.res.materials})</div>`;
     h += `<div class="btns" style="margin:6px 0 8px"><button data-act="projects" class="${avail ? 'primary pulse' : ''}" ${avail ? '' : 'disabled'}>Choose a project</button></div>`;
-    h += RES.length ? `<div class="row dim">Relics in your cities: ${CV.COLORS.map(c => `${dot(c)}${g.relicCount(c)}`).join('  ')}</div>` : '';
+    h += RES.length ? `<div class="row dim">Relics in your settlements: ${CV.COLORS.map(c => `${dot(c)}${g.relicCount(c)}`).join('  ')}</div>` : '';
     h += have.length ? have.map(({ p, n }) => `<span class="chip" data-tip="${p.desc.replace(/"/g, '&quot;')}">${p.name}${n > 1 ? ' ×' + n : ''}</span>`).join('') : '<div class="row dim">No projects yet.</div>';
     el('projects').innerHTML = h;
   }
@@ -136,15 +136,29 @@
 
   function openProjects() {
     if (!g.projectAvailable()) return;
-    const cards = g.projectOffer().map(p => {
-      const ok = g.relicsOk(p.relic);
-      return `<button class="card" data-pick="${p.id}" ${ok ? '' : 'disabled'}>
-        <div class="cat">${p.cat}${p.multi ? ' · repeatable' : ''}</div><div class="t">${p.name}</div>
-        <div>${p.desc}</div>${p.relic ? `<div class="need ${ok ? 'ok' : 'warn'}">Requires ${reqText(p.relic)}</div>` : ''}</button>`;
-    }).join('');
+    const offered = new Set(g.projectOffer().map(p => p.id));
+    const kids = id => PROJECTS.filter(p => p.parent === id);
+    const esc = s => s.replace(/"/g, '&quot;');
+    const node = p => {
+      const n = g.taken[p.id] || 0, isOffered = offered.has(p.id), ok = g.relicsOk(p.relic);
+      const state = isOffered ? (ok ? 'open' : 'short') : n ? 'done' : 'locked';
+      const tip = `${p.desc}${p.multi ? ' (repeatable)' : ''}${p.relic ? ` Requires ${p.relic.n} ${p.relic.color} relic${p.relic.n > 1 ? 's' : ''}.` : ''}`;
+      const body = `<div class="t">${p.name}${n ? `<span class="dim"> ${n > 1 ? '×' + n : '✓'}</span>` : ''}</div>` +
+        `${p.multi ? '<div class="sub dim">repeatable</div>' : ''}` +
+        (p.relic ? `<div class="sub ${ok ? 'ok' : 'warn'}">${reqText(p.relic)}</div>` : '');
+      const cls = `pnode ${state}`;
+      const inner = isOffered && ok
+        ? `<button class="${cls}" data-pick="${p.id}" data-tip="${esc(tip)}">${body}</button>`
+        : `<div class="${cls}" data-tip="${esc(tip)}">${body}</div>`;
+      const ch = kids(p.id);
+      return `<div class="branch">${inner}${ch.length ? `<div class="kids">${ch.map(c => `<div class="kid">${node(c)}</div>`).join('')}</div>` : ''}</div>`;
+    };
+    const roots = PROJECTS.filter(p => !p.parent);
+    const cats = [...new Set(roots.map(p => p.cat))].sort((a, b) => (a === 'Victory') - (b === 'Victory'));
+    const trees = cats.map(c => `<section class="ptree"><h4>${c}</h4>${roots.filter(p => p.cat === c).map(node).join('')}</section>`).join('');
     openModal(`<div class="sheet"><h3>Choose a project</h3>
-      <div class="dim">Costs ${ICON.materials}${g.threshold}. Projects change the rules of the game.</div>
-      <div class="cards">${cards}</div><div class="btns"><button data-act="close">Later</button></div></div>`, 'projects');
+      <div class="dim">Costs ${ICON.materials}${g.threshold}. Projects change the rules of the game. Hover a project for details.</div>
+      <div class="ptrees">${trees}</div><div class="btns"><button data-act="close">Later</button></div></div>`, 'projects');
   }
 
   function openSite(key) {
@@ -152,7 +166,7 @@
     const label = {
       explore: ['Reveal the surroundings', 'Instantly explore a large area around the site.'],
       features: ['Awaken the land', 'Two special features appear on nearby tiles.'],
-      city: ['Settle the site', 'A free city is founded on the site tile.'],
+      settlement: ['Settle the site', 'A free settlement is founded on the site tile.'],
       cleanse: ['Cleanse', `Remove all blight, pustules included, within ${CFG.cleanseRadius} tiles.`],
       bundle: ['Offerings', 'A bundle of resources.'],
     };
@@ -176,17 +190,17 @@
   // [title, keys]. Keys of CFG missing here still show up under "Other". World-generation keys need a new game.
   const OPTION_GROUPS = [
     ['Start', ['startFood', 'startMaterials', 'startWealth']],
-    ['Cities', ['cityBaseCost', 'cityCostGrowth', 'cityClaimRadius']],
+    ['Settlements', ['settlementBaseCost', 'settlementCostGrowth', 'settlementClaimRadius']],
     ['Exploring', ['exploreWealthPerTile', 'openFrontierRadius']],
     ['Fog glimpses', ['glimpseBase', 'glimpseStep', 'glimpseMax', 'blightSightRange']],
     ['World generation (new game)', ['blobMin', 'blobVariance', 'blobFillChance', 'startSafeRadius', 'siteMinDistance',
       'siteChance', 'featureChance', 'landThreshold', 'ringLandChance', 'desertThreshold', 'mountainBelow', 'forestBelow']],
     ['Special features', ['tileFeatureAmount', 'allFeatureAmount']],
-    ['Projects', ['projectBase', 'projectGrowth', 'projectOfferSize', 'legacyPerDistance', 'tradeBonus', 'gloriousBonus', 'gloriousRadius']],
+    ['Projects', ['projectBase', 'projectGrowth', 'legacyPerDistance', 'tradeBonus', 'gloriousBonus', 'gloriousRadius']],
     ['Ancient sites', ['siteOptionCount', 'siteBundleMin', 'siteBundleVariance',
       'siteExploreRadius', 'siteFeatureCount', 'siteFeatureRadius', 'cleanseRadius']],
     ['Blight', ['blightStart', 'blightEvery', 'blightSpawnRange', 'blightSpread']],
-    ['Victory', ['winCities', 'winSites', 'winAscensions']],
+    ['Victory', ['winSettlements', 'winSites', 'winAscensions']],
   ];
   const WORLD_KEYS = new Set(OPTION_GROUPS[4][1]);
   const optLabel = k => cap(k.replace(/([A-Z])/g, ' $1').toLowerCase());
@@ -240,8 +254,8 @@
 
   function showOver() {
     const o = g.over;
-    const how = { cities: 'built enough cities', sites: 'found enough ancient sites', ascension: 'ascended' };
-    openModal(`<div class="sheet"><h3>${o.won ? 'You win' : 'The blight took your last city'}</h3>
+    const how = { settlements: 'built enough settlements', sites: 'found enough ancient sites', ascension: 'ascended' };
+    openModal(`<div class="sheet"><h3>${o.won ? 'You win' : 'The blight took your last settlement'}</h3>
       <div>${o.won ? `On turn ${o.turn} you ${how[o.how]}.` : `You lasted until turn ${o.turn}.`}</div>
       <div class="btns"><button class="primary" data-act="restart">New world</button></div></div>`, 'over');
   }
@@ -255,7 +269,7 @@
       g.endTurn(); infoKey = null; refresh();
     }
   }
-  function doFound() { const c = centre(); if (g.found(c.x, c.y).ok) { CV.audio.play('city'); refresh(); } }
+  function doFound() { const c = centre(); if (g.found(c.x, c.y).ok) { CV.audio.play('settlement'); refresh(); } }
   function doSite() { const k = K(centre().x, centre().y); if (g.sites.has(k) && !g.usedSites.has(k)) openSite(k); }
 
   document.addEventListener('click', e => {
@@ -429,8 +443,8 @@
       ctx.fillStyle = TYPE_COLOR[t.type]; ctx.fillRect(sx, sy, TS, TS);
       const cid = g.claimed.get(k);
       if (cid !== undefined) {
-        ctx.strokeStyle = CITY_COLORS[(cid - 1) % CITY_COLORS.length]; ctx.lineWidth = 2;
-        ctx.beginPath(); // outline only the sides facing a tile of another city (or unclaimed)
+        ctx.strokeStyle = SETTLEMENT_COLORS[(cid - 1) % SETTLEMENT_COLORS.length]; ctx.lineWidth = 2;
+        ctx.beginPath(); // outline only the sides facing a tile of another settlement (or unclaimed)
         if (g.claimed.get(K(x, y - 1)) !== cid) { ctx.moveTo(sx, sy + 1); ctx.lineTo(sx + TS, sy + 1); }
         if (g.claimed.get(K(x, y + 1)) !== cid) { ctx.moveTo(sx, sy + TS - 1); ctx.lineTo(sx + TS, sy + TS - 1); }
         if (g.claimed.get(K(x - 1, y)) !== cid) { ctx.moveTo(sx + 1, sy); ctx.lineTo(sx + 1, sy + TS); }
@@ -438,7 +452,7 @@
         ctx.stroke();
       }
       const f = g.feature(x, y);
-      if (!f && !t.site && !bl && !g.cities.some(c => c.x === x && c.y === y)) { // plain tile: faint terrain hint
+      if (!f && !t.site && !bl && !g.settlements.some(c => c.x === x && c.y === y)) { // plain tile: faint terrain hint
         ctx.globalAlpha = 0.22; glyph(TYPE_ICON[t.type], cx, cy, 20 * z); ctx.globalAlpha = 1;
       }
       if (f) featureIcon(f, cx, cy + (t.site ? 9 : 0) * z, !!bl, z);
@@ -451,8 +465,8 @@
         ctx.strokeStyle = 'rgba(190,100,230,.8)'; ctx.lineWidth = 2; ctx.setLineDash([5, 4]);
         ctx.strokeRect(sx + 3, sy + 3, TS - 6, TS - 6); ctx.setLineDash([]);
       }
-      const city = g.cities.find(c => c.x === x && c.y === y);
-      if (city) { village(cx, cy - 1 * z, z); }
+      const settlement = g.settlements.find(c => c.x === x && c.y === y);
+      if (settlement) { village(cx, cy - 1 * z, z); }
     } else {
       const gl = g.glimpse(x, y);
       let frontier = false;

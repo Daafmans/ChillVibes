@@ -2,7 +2,7 @@
 
 ## Interface
 - **One screen:** the world map (a square grid) and **one contextual panel**.
-- One half of the panel shows information about **whatever the view centres on**: a tile, a city, an ancient site, and so on.
+- One half of the panel shows information about **whatever the view centres on**: a tile, a settlement, an ancient site, and so on.
 - The other half of the panel shows the projects the player has obtained.
 - The map pans with the **mouse** or the **cursor keys**.
 - Because the panel follows the view centre, no click-to-select state is needed. This also keeps the UI small.
@@ -18,23 +18,23 @@
  new tiles, features, ancient sites            │
    │                                           │
    ▼                                           │
- EXPAND ── spend Food, found a city instantly ─┘
+ EXPAND ── spend Food, found a settlement instantly ─┘
    │       claims a 5x5 area (minus corners)
    ▼
- each turn: cities produce Food / Materials / Wealth
+ each turn: settlements produce Food / Materials / Wealth
    │
    ├─► Materials buy PROJECTS (rule changes: see 03-systems.md)
    └─► Wealth widens every EXPLORATION
 
- Pressure: BLIGHT spreads from turn 10 on and eats cities.
+ Pressure: BLIGHT spreads from turn 10 on and eats settlements.
 ```
 
 ## A turn
-1. **Income.** Every city produces resources from all its claimed tiles into global stocks.
+1. **Income.** Every settlement produces resources from all its claimed tiles into global stocks.
 2. **Player actions.** Within resource limits, any of:
    - **Gain a project** when materials limit is reached.
    - **Explore** one tile (the main action; see below).
-   - **Found** a city on an unclaimed, non-blighted, non-water tile you know.
+   - **Found** a settlement on an unclaimed, non-blighted, non-water tile you know.
    - Activate unused ancient sites.
 1. **End turn.**
 	1. Win conditions checked.
@@ -58,20 +58,20 @@
 - Projects add **vision into the fog** (up to 5 tiles) of basic types, special features, ancient sites and blight. Each one lets you plan your exploration instead of picking blind.
 
 ### Where to expand next?
-- A city costs **Food**, is **instant**, and claims a **5×5 area minus corners (21 tiles)**.
-- Claimed tiles can't be claimed again, so **city placement shapes the whole map**. Overlap is impossible, so you must choose between tight packing and wide coverage.
-- Cities need land, not water (until a project lifts this), not on claimed tiles, and not on pustules or blight.
-- A city is worth its tiles: the yield mix, special features, and how exposed it is to blight.
+- A settlement costs **Food**, is **instant**, and claims a **5×5 area minus corners (21 tiles)**.
+- Claimed tiles can't be claimed again, so **settlement placement shapes the whole map**. Overlap is impossible, so you must choose between tight packing and wide coverage.
+- Settlements need land, not water (until a project lifts this), not on claimed tiles, and not on pustules or blight.
+- A settlement is worth its tiles: the yield mix, special features, and how exposed it is to blight.
 
 ## Why they pull against each other
-- **Wealth** widens exploring. **Food** pays for cities. Both come from the same tiles, and cities need to be *somewhere explored*.
+- **Wealth** widens exploring. **Food** pays for settlements. Both come from the same tiles, and settlements need to be *somewhere explored*.
 - Wealth tiles reveal more land each turn, but they take tiles away from Food and Materials. Expanding is limited by Food, not by what you have seen.
-- Blight pushes you to both: explore to find ancient sites that can clear it, expand to keep cities alive.
+- Blight pushes you to both: explore to find ancient sites that can clear it, expand to keep settlements alive.
 
 ## Tension curve
 | Turns | Feel |
 |---|---|
-| 1-9 | Calm. Learn the map, found first cities, begin on projects. |
+| 1-9 | Calm. Learn the map, found first settlements, begin on projects. |
 | 10+ | The first pustule appears. Clock starts. |
 | 20, 30, ... | A new pustule every 10 turns while the old ones keep spreading. |
-| End | Win by reaching a goal, or lose when every city is blighted. |
+| End | Win by reaching a goal, or lose when every settlement is blighted. |

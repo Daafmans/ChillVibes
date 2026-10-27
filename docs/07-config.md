@@ -10,20 +10,20 @@ All tunable gameplay numbers live in `CV.CFG` in `game/config.js`. Every value i
 | `startMaterials` | 0 | Starting materials |
 | `startWealth` | 0 | Starting wealth |
 
-## Cities
+## Settlements
 
 | Key | Default | Description |
 |---|---|---|
-| `cityBaseCost` | 40 | Food cost of a city; `cost = ceil(base * growth^(cities-1))` |
-| `cityCostGrowth` | 1.45 | Cost multiplier per existing city |
-| `cityClaimRadius` | 2 | Base border radius (diamond); Wider Borders also claims the corners of the surrounding square |
+| `settlementBaseCost` | 40 | Food cost of a settlement; `cost = ceil(base * growth^(settlements-1))` |
+| `settlementCostGrowth` | 1.45 | Cost multiplier per existing settlement |
+| `settlementClaimRadius` | 2 | Base border radius (diamond); Wider Borders also claims the corners of the surrounding square |
 
 ## Exploring
 
 | Key | Default | Description |
 |---|---|---|
 | `exploreWealthPerTile` | 10 | Exploring spends all wealth; each 10 spent reveals one extra tile |
-| `openFrontierRadius` | 20 | Open Frontier: explore this far (Chebyshev) from a city |
+| `openFrontierRadius` | 20 | Open Frontier: explore this far (Chebyshev) from a settlement |
 
 ## Fog glimpses
 
@@ -66,10 +66,9 @@ Surveyor's Eye, Omen Reading, Ancient Sight, Blight Sight. Range = `base + step 
 |---|---|---|
 | `projectBase` | 60 | Materials threshold for the first project |
 | `projectGrowth` | 1.4 | Threshold multiplier after each project |
-| `projectOfferSize` | 5 | Projects offered each time, including the always-offered Ascension |
 | `legacyPerDistance` | 0.05 | Site benefit scale increases by this × distance from start, per Legacy copy |
-| `tradeBonus` | 1 | Each of food/materials/wealth per Trade Empire copy per touching city |
-| `gloriousBonus` | 3 | Per Glorious Capital copy, per other city within the radius |
+| `tradeBonus` | 1 | Each of food/materials/wealth per Trade Empire copy per touching settlement |
+| `gloriousBonus` | 3 | Per Glorious Capital copy, per other settlement within the radius |
 | `gloriousRadius` | 10 | Radius for Glorious Capital |
 
 ## Ancient sites
@@ -97,7 +96,7 @@ Surveyor's Eye, Omen Reading, Ancient Sight, Blight Sight. Range = `base + step 
 
 | Key | Default | Description |
 |---|---|---|
-| `winCities` | 20 | Cities needed to win |
+| `winSettlements` | 20 | Settlements needed to win |
 | `winSites` | 20 | Ancient sites needed to win |
 | `winAscensions` | 10 | Times Ascension must be picked to win |
 
@@ -125,9 +124,9 @@ Surveyor's Eye, Omen Reading, Ancient Sight, Blight Sight. Range = `base + step 
 | Oasis | tile | desert | food |
 | Fishing Banks | tile | ocean | food |
 | Pearl Beds | tile | ocean | wealth |
-| Sacred Grove | city | plains, forest | – |
-| Hot Springs | city | mountains, forest | – |
-| Natural Harbour | city | plains, desert, mountains | – |
+| Sacred Grove | settlement | plains, forest | – |
+| Hot Springs | settlement | mountains, forest | – |
+| Natural Harbour | settlement | plains, desert, mountains | – |
 | Tidal Shrine | relic (blue) | ocean, plains | – |
 | Sunken Idol | relic (blue) | ocean, forest | – |
 | Standing Stones | relic (green) | forest, plains | – |
@@ -136,6 +135,8 @@ Surveyor's Eye, Omen Reading, Ancient Sight, Blight Sight. Range = `base + step 
 | Bone Garden | relic (black) | desert, forest | – |
 
 ### Projects (`CV.PROJECTS`)
+
+Each entry also has a `parent` id (`null` for roots); the tree itself is in `06-projects.md`.
 
 | Category | Project | Repeatable | Relic cost |
 |---|---|---|---|

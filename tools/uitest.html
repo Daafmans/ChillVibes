@@ -11,6 +11,7 @@
 <div id="modal" hidden></div>
 <pre id="res"></pre>
 <script src="../game/config.js"></script>
+<script src="../game/projects.js"></script>
 <script src="../game/world.js"></script>
 <script src="../game/game.js"></script>
 <script src="../game/audio.js"></script>
@@ -26,7 +27,7 @@
     for (let t = 0; t < 120; t++) {
       // wander: pan in a slowly rotating direction so explore/found hit varied tiles
       const g = CV.ui.game;
-      // pick the cheapest legal explore target and the best city spot, jump the camera there, press the real buttons
+      // pick the cheapest legal explore target and the best settlement spot, jump the camera there, press the real buttons
       let ex = null, ec = 1e9;
       for (const k of g.known) {
         const kx = Math.floor((k + 65536) / 131072), ky = k - kx * 131072;
@@ -48,13 +49,13 @@
     const g = CV.ui.game;
     // options menu: open, edit, save, revert
     click('[data-act=options]');
-    const inp = document.querySelector('input[data-cfg=cityBaseCost]');
+    const inp = document.querySelector('input[data-cfg=settlementBaseCost]');
     out.push('options inputs: ' + document.querySelectorAll('input[data-cfg]').length + ' of ' + Object.keys(CV.CFG_DEFAULTS).length);
     inp.value = '99'; click('[data-act=saveopts]');
-    out.push('after save cityBaseCost=' + CV.CFG.cityBaseCost + ' stored=' + localStorage.getItem('chillvibes.options.v1'));
+    out.push('after save settlementBaseCost=' + CV.CFG.settlementBaseCost + ' stored=' + localStorage.getItem('chillvibes.options.v1'));
     click('[data-act=options]'); click('[data-act=revert]');
-    out.push('after revert cityBaseCost=' + CV.CFG.cityBaseCost + ' stored=' + localStorage.getItem('chillvibes.options.v1'));
-    out.push('turn ' + g.turn + ' cities ' + g.cities.length + ' known ' + g.known.size + ' proj ' + g.projectCount + ' over ' + JSON.stringify(g.over));
+    out.push('after revert settlementBaseCost=' + CV.CFG.settlementBaseCost + ' stored=' + localStorage.getItem('chillvibes.options.v1'));
+    out.push('turn ' + g.turn + ' settlements ' + g.settlements.length + ' known ' + g.known.size + ' proj ' + g.projectCount + ' over ' + JSON.stringify(g.over));
     out.push('top: ' + document.getElementById('top').innerText.replace(/\n/g, ' '));
     out.push('info: ' + document.getElementById('info').innerText.replace(/\n/g, ' | '));
     out.push('toast: ' + document.getElementById('toast').innerText.replace(/\n/g, ' | '));

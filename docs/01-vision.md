@@ -3,7 +3,7 @@
 *Status: draft v0.2. Rewritten around the designer's detailed brief. Gaps and guesses are marked **[ASSUMPTION]** and collected in `04-open-questions.md`.*
 
 ## Pitch
-A single-player, turn-based empire builder, Civilization reduced to its core. You start with one revealed square of an unknown world. Each turn you choose where to **explore** and where to **expand**, while **blight** spreads across the land and slowly squeezes you. You win by building enough cities, finding ancient sites, or finishing enough projects, before blight takes your last city.
+A single-player, turn-based empire builder, Civilization reduced to its core. You start with one revealed square of an unknown world. Each turn you choose where to **explore** and where to **expand**, while **blight** spreads across the land and slowly squeezes you. You win by building enough settlements, finding ancient sites, or finishing enough projects, before blight takes your last settlement.
 
 ## Pillars
 1. **Empire building is the game.** No units, no combat, no diplomacy. You work with a map, three resources and a project list.
@@ -16,7 +16,7 @@ A single-player, turn-based empire builder, Civilization reduced to its core. Yo
 6. **Short and readable.** One map view and one contextual panel. Three resources.
 
 ## Target experience
-- **Early:** Almost everything is dark. Each reveal feels like a small discovery and each city is a bet.
+- **Early:** Almost everything is dark. Each reveal feels like a small discovery and each settlement is a bet.
 - **Middle:** Blight appears. You learn to read it, to guess which patches are pustules, and to push out before it reaches you.
 - **Late:** Projects have opened up the rules and you race toward one of the win conditions as blight closes in.
 
@@ -24,4 +24,4 @@ A single-player, turn-based empire builder, Civilization reduced to its core. Yo
 - Multiplayer or AI empires
 - Units, movement and combat
 - Diplomacy, trade, tech trees measured in percentages
-- Per-city resource management (resources are global)
+- Per-settlement resource management (resources are global)

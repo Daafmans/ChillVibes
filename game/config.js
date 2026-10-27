@@ -5,13 +5,13 @@
     // --- Start ---
     startFood: 0, startMaterials: 0, startWealth: 0,
 
-    // --- Cities ---
-    cityBaseCost: 40, cityCostGrowth: 1.45,       // food; cost = ceil(base * growth^(cities-1))
-    cityClaimRadius: 2,                           // base border radius (diamond); Wider Borders also claims the corners of the surrounding square
+    // --- Settlements ---
+    settlementBaseCost: 40, settlementCostGrowth: 1.45,       // food; cost = ceil(base * growth^(settlements-1))
+    settlementClaimRadius: 2,                           // base border radius (diamond); Wider Borders also claims the corners of the surrounding square
 
     // --- Exploring ---
     exploreWealthPerTile: 10,                     // exploring spends all wealth; each 10 spent reveals one extra tile
-    openFrontierRadius: 20,                       // Open Frontier: explore this far (Chebyshev) from a city
+    openFrontierRadius: 20,                       // Open Frontier: explore this far (Chebyshev) from a settlement
 
     // --- Fog glimpses (Surveyor's Eye, Omen Reading, Ancient Sight, Blight Sight) ---
     glimpseBase: 1, glimpseStep: 1, glimpseMax: 15, // range = base + step * (copies - 1), capped at max
@@ -33,10 +33,9 @@
 
     // --- Projects ---
     projectBase: 60, projectGrowth: 1.4,          // materials threshold, multiplied by growth after each project
-    projectOfferSize: 5,                          // projects offered each time, including Ascension
     legacyPerDistance: 0.05,                      // site benefit scale += this * distance from start, per Legacy copy
-    tradeBonus: 1,                                // each of food/materials/wealth per Trade Empire copy per touching city
-    gloriousBonus: 3, gloriousRadius: 10,         // per Glorious Capital copy, per other city within the radius
+    tradeBonus: 1,                                // each of food/materials/wealth per Trade Empire copy per touching settlement
+    gloriousBonus: 3, gloriousRadius: 10,         // per Glorious Capital copy, per other settlement within the radius
 
     // --- Ancient sites ---
     siteOptionCount: 3,                           // benefits offered per site (plus the always-offered bundle)
@@ -51,7 +50,7 @@
     blightSpread: 3,                             // tiles gained per pustule per turn
 
     // --- Victory ---
-    winCities: 20, winSites: 20, winAscensions: 10,
+    winSettlements: 20, winSites: 20, winAscensions: 10,
   };
   CV.CFG_DEFAULTS = Object.freeze(Object.assign({}, CV.CFG));
   CV.RES = ['food', 'materials', 'wealth'];
@@ -98,43 +97,9 @@
     desert: {},
   };
   CV.PROJECTS = [
-    // Always offered, repeatable, does not raise the cost of the next project or count as a regular project
-    { id: 'ascension', cat: 'Victory', name: 'Ascension', multi: true, relic: null, ascension: true,
+    // Always offered (no parent), repeatable, does not raise the cost of the next project or count as a regular project
+    { id: 'ascension', cat: 'Victory', name: 'Ascension', parent: null, multi: true, relic: null, ascension: true,
       get desc() { return `Pick it ${CV.CFG.winAscensions} times to win. Does not raise the cost of the next project.`; } },
-    // Vision
-    { id: 'openfrontier', cat: 'Vision', name: 'Open Frontier', multi: false, relic: null,
-      get desc() { return `Explore any tile within ${CV.CFG.openFrontierRadius} tiles of a city, even if it is not next to known land.`; } },
-    { id: 'surveyor', cat: 'Vision', name: "Surveyor's Eye", multi: true, relic: null,
-      get desc() { return `See basic tile types up to ${CV.CFG.glimpseBase} tile${CV.CFG.glimpseBase === 1 ? '' : 's'} into the fog (+${CV.CFG.glimpseStep} per extra copy).`; } },
-    { id: 'omen', cat: 'Vision', name: 'Omen Reading', multi: true, relic: null,
-      get desc() { return `See that a special feature exists (not its type) up to ${CV.CFG.glimpseBase} tile${CV.CFG.glimpseBase === 1 ? '' : 's'} into the fog.`; } },
-    { id: 'sight', cat: 'Vision', name: 'Ancient Sight', multi: true, relic: null,
-      get desc() { return `See ancient sites up to ${CV.CFG.glimpseBase} tile${CV.CFG.glimpseBase === 1 ? '' : 's'} into the fog.`; } },
-    { id: 'seafaring', cat: 'Vision', name: 'Seafaring', multi: false, relic: { n: 1, color: 'blue' },
-      desc: 'Allows exploring ocean tiles.' },
-    // Expansion
-    { id: 'harbour', cat: 'Expansion', name: 'Harbour Founding', multi: false, relic: { n: 1, color: 'green' },
-      desc: 'Allows founding cities on water tiles.' },
-    { id: 'wider', cat: 'Expansion', name: 'Wider Borders', multi: false, relic: null,
-      desc: 'Cities also claim the corner tiles of their 5x5 block, including existing cities. The oldest city wins ties.' },
-    { id: 'legacy', cat: 'Expansion', name: 'Legacy of Distance', multi: true, relic: null,
-      desc: 'Ancient site benefits scale with the site’s distance from the starting city.' },
-    { id: 'trade', cat: 'Expansion', name: 'Trade Empire', multi: true, relic: null,
-      get desc() { return `+${CV.CFG.tradeBonus} food, material and wealth for each city with a claimed tile bordering another city.`; } },
-    { id: 'glorious', cat: 'Expansion', name: 'Glorious Capital', multi: true, relic: { n: 2, color: 'green' },
-      get desc() { return `The oldest city makes +${CV.CFG.gloriousBonus} food, material and wealth for each other city within ${CV.CFG.gloriousRadius} tiles.`; } },
-    // Blight
-    { id: 'blightsight', cat: 'Blight', name: 'Blight Sight', multi: false, relic: null,
-      get desc() { return `See blight up to ${CV.CFG.blightSightRange} tile${CV.CFG.blightSightRange === 1 ? '' : 's'} into the fog.`; } },
-    { id: 'discernment', cat: 'Blight', name: 'Pustule Discernment', multi: false, relic: { n: 1, color: 'black' },
-      desc: 'Tell pustules apart from ordinary blight.' },
-    { id: 'forecast', cat: 'Blight', name: 'Rot Forecast', multi: false, relic: null,
-      desc: 'Explored tiles that blight could spread to next turn are highlighted.' },
-    { id: 'scavenge', cat: 'Blight', name: 'Scavenge the Rot', multi: false, relic: { n: 1, color: 'black' },
-      desc: 'Blighted tiles in your cities still yield 1 food, 1 material and 1 wealth (features stay disabled).' },
-    { id: 'fight', cat: 'Blight', name: 'Blight Fight', multi: false, relic: { n: 1, color: 'black' },
-      desc: 'Ordinary blight on tiles you explore is cleansed.' },
-    { id: 'burst', cat: 'Blight', name: 'Pustule Burst', multi: false, relic: { n: 2, color: 'black' },
-      desc: 'Pustules on tiles you explore are destroyed.' },
+    // The rest of the tree is generated into projects.js from docs/06-projects.md (node tools/build-projects.js)
   ];
 })(globalThis.CV = globalThis.CV || {});

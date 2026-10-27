@@ -2,6 +2,7 @@
 <html><head><meta charset="utf-8"><title>ChillVibes sim</title></head>
 <body><pre id="out">running</pre>
 <script src="../game/config.js"></script>
+<script src="../game/projects.js"></script>
 <script src="../game/world.js"></script>
 <script src="../game/game.js"></script>
 <script>
@@ -19,11 +20,11 @@ function play(seed, mode, maxTurns) {
   let firstLoss = null;
   for (let i = 0; i < maxTurns && !g.over; i++) {
     if (mode === 'bot') {
-      // activate sites: prefer bundle when poor, cleanse when blight exists, else city/explore/features
+      // activate sites: prefer bundle when poor, cleanse when blight exists, else settlement/explore/features
       for (const [key] of g.sites) {
         if (g.usedSites.has(key)) continue;
         const offer = g.siteOffer(key);
-        const order = g.blight.size ? ['cleanse', 'city', 'explore', 'features', 'bundle'] : ['city', 'explore', 'features', 'bundle', 'cleanse'];
+        const order = g.blight.size ? ['cleanse', 'settlement', 'explore', 'features', 'bundle'] : ['settlement', 'explore', 'features', 'bundle', 'cleanse'];
         for (const id of order) if (g.activateSite(key, id).ok) break;
       }
       // projects
@@ -31,7 +32,7 @@ function play(seed, mode, maxTurns) {
         const o = g.projectOffer().filter(p => g.relicsOk(p.relic));
         if (!o.length || !g.chooseProject(o[Math.floor(g.rng() * o.length)].id).ok) break;
       }
-      // found cities greedily
+      // found settlements greedily
       for (let n = 0; n < 5; n++) {
         let best = null, bs = -1;
         for (const k of g.known) {
@@ -60,9 +61,9 @@ function play(seed, mode, maxTurns) {
       }
       if (cand) g.explore(...cand);
     }
-    const before = g.cities.length;
+    const before = g.settlements.length;
     g.endTurn();
-    if (!firstLoss && g.cities.length < before) firstLoss = g.turn;
+    if (!firstLoss && g.settlements.length < before) firstLoss = g.turn;
   }
   return g;
 }
@@ -84,7 +85,7 @@ try {
   // basic rule checks
   {
     const g = new CV.Game(5);
-    assert(g.cities.length === 1 && g.claimed.size === 21, 'start city claims 21, got ' + g.claimed.size);
+    assert(g.settlements.length === 1 && g.claimed.size === 21, 'start settlement claims 21, got ' + g.claimed.size);
     assert(g.known.size === 21, 'start reveals footprint: ' + g.known.size);
     const inc = g.income();
     log('start income ' + JSON.stringify(inc));
@@ -105,7 +106,7 @@ try {
     }
     g.taken.wider = 1; g.claimAll(); assert(g.claimed.size === 25, 'wider claims 25, got ' + g.claimed.size);
   }
-  // idle: how fast does blight kill a lone city?
+  // idle: how fast does blight kill a lone settlement?
   for (const seed of [1, 2, 3]) {
     const g = play(seed, 'idle', 400);
     log(`idle seed ${seed}: ${g.over ? (g.over.won ? 'WON' : 'lost at turn ' + g.over.turn) : 'survived 400'} blight=${g.blight.size} pustules=${g.pustuleCount()}`);
@@ -115,7 +116,7 @@ try {
     const t = performance.now();
     const g = play(seed, 'bot', 300);
     const p = g.progress();
-    log(`bot seed ${seed}: ${g.over ? (g.over.won ? 'WON(' + g.over.how + ') t' + g.over.turn : 'lost t' + g.over.turn) : 'alive t' + g.turn} cities ${p.cities} sites ${p.sites} proj ${p.projects} known ${g.known.size} blight ${g.blight.size} res ${JSON.stringify(g.res)} ${(performance.now() - t) | 0}ms`);
+    log(`bot seed ${seed}: ${g.over ? (g.over.won ? 'WON(' + g.over.how + ') t' + g.over.turn : 'lost t' + g.over.turn) : 'alive t' + g.turn} settlements ${p.settlements} sites ${p.sites} proj ${p.projects} known ${g.known.size} blight ${g.blight.size} res ${JSON.stringify(g.res)} ${(performance.now() - t) | 0}ms`);
   }
 } catch (e) { log('EXCEPTION ' + e.stack); }
 document.getElementById('out').textContent = 'DONE\n' + lines.join('\n');
