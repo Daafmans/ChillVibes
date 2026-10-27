@@ -15,7 +15,7 @@ All resources are **stored and spent globally**, not per settlement.
 | ------------- | --------------------------------------------------- |
 | **Food**      | Founding settlements                                     |
 | **Materials** | Projects                                            |
-| **Wealth**    | Exploration. All of it is spent on each exploration |
+| **Wealth**    | Settlement upgrades                                 |
 
 - Every turn, each settlement adds the yields of **all its claimed tiles**.
 - **Desert** yields nothing.
@@ -43,9 +43,15 @@ The full list (which base tiles each feature can appear on, its name and its bon
 - **Loss:** if the settlement's own tile turns to blight, the settlement is lost.
 - A **free settlement** can come from an ancient site.
 - **Exploration**: Claimed tiles are automatically and instantly explored
+- **Upgrade:** each settlement can be upgraded **once**, for **Wealth** (`upgradeCost`). The upgrades on offer are the ones unlocked by projects taken so far (see `06-projects.md`). Upgrades:
+  - **Survey Post** (unlocked by *Cartography*): every exploration reveals 1 extra tile per settlement with this upgrade.
+  - **Shrine Keeper** (unlocked by *Pilgrimage*): every ancient site within 10 tiles (`shrineKeeperRadius`) of this settlement can be activated one additional time. Shrine Keepers stack: a site in range of two gets two extra activations.
+  - **Boundary Stones** (unlocked by *Land Rights*): the settlement claims four additional tiles, the one `boundaryStoneReach` (3) steps away in each cardinal direction. These are claimed after every settlement's regular tiles, so they never take a tile another settlement already holds.
+  - **Desert Bloom** (unlocked by *Irrigation*): every desert tile claimed by the settlement yields 1 food, 1 material and 1 wealth (instead of nothing). Special features on the tile still add their bonus; blighted tiles still follow the blight rules.
+  - **Artisan Quarter** (unlocked by *Craftsmanship*): the bonuses of special tiles (tile features) claimed by the settlement are doubled. Blighted tiles still have their features disabled.
 
 ## 5. Ancient sites
-Found by exploring. Once found, the player can activate it once, at any time, to get a benefit. One of the benefits is always a certain amount of resources. The other benefits are always related to the location of the ancient site.
+Found by exploring. Once found, the player can activate it once (plus once per Shrine Keeper in range), at any time, to get a benefit. One of the benefits is always a certain amount of resources. The other benefits are always related to the location of the ancient site.
 
 Benefits:
 - Instantly explore a large area around the site

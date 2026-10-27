@@ -69,11 +69,15 @@
     else title = 'Unexplored';
     const cid = g.claimed.get(k);
     const settlement = g.settlements.find(c => c.x === x && c.y === y);
-    if (settlement) title = `Settlement #${settlement.id} — ${cap(t.type)}`;
+    if (settlement) {
+      title = `Settlement #${settlement.id} — ${cap(t.type)}`;
+      const up = CV.UPGRADES.find(u => u.id === settlement.upgrade);
+      if (up) rows.push(`${up.icon} Upgrade: ${up.name}. ${up.desc}`);
+    }
     const bl = g.blight.get(k);
     const seesBlight = known || (gl && gl.blight);
     if (bl && seesBlight) {
-      rows.push(bl.pustule && g.taken.discernment ? '<span class="warn">☣ Pustule — the source of the blight</span>' : `<span class="warn">☣ Blighted — ${g.taken.scavenge && cid ? 'features disabled' : 'produces nothing'}</span>`);
+      rows.push(bl.pustule && g.taken.discernment ? '<span class="warn">☣ Pustule — the source of the blight</span>' : `<span class="warn">☣ Blighted — ${(g.settlementById(cid) || {}).upgrade === 'scavenger' ? 'features disabled' : 'produces nothing'}</span>`);
     }
     if (known && !bl && risk().has(k)) rows.push('<span class="warn">⚠ Blight may spread here next turn</span>');
     if (known) {
@@ -81,7 +85,7 @@
       rows.push(`Yield: ${fmt(g.tileYield(x, y))}${bl ? ' (blighted)' : ''}`);
       const f = g.feature(x, y);
       if (f) rows.push(featureText(f) + (bl ? ' <span class="warn">(disabled)</span>' : ''));
-      if (t.site) rows.push(g.usedSites.has(k) ? '\u{1F5FF} Ancient site (used)' : '\u{1F5FF} Ancient site — <span class="ok">ready to activate</span>');
+      if (t.site) rows.push(g.siteUsed(k) ? '\u{1F5FF} Ancient site (used)' : '\u{1F5FF} Ancient site — <span class="ok">ready to activate</span>');
     } else if (gl) {
       if (gl.feature && t.feature) rows.push('✨ Something special here');
       if (gl.site && t.site) rows.push('\u{1F5FF} An ancient site');
@@ -93,12 +97,21 @@
     const { x, y } = centre(), k = K(x, y);
     const ti = tileInfo(x, y);
     const ex = g.canExplore(x, y), fd = g.canFound(x, y);
-    const siteReady = g.sites.has(k) && !g.usedSites.has(k);
+    const siteReady = g.sites.has(k) && !g.siteUsed(k);
     let btns = '';
-    btns += `<span title="${ex.ok ? 'Exploring ends the turn' : ex.reason}"><button class="primary" data-act="explore" ${ex.ok ? '' : 'disabled'}>Explore (E) · ${ICON.wealth}${g.res.wealth}${ex.bonus ? ` → +${ex.bonus} tile${ex.bonus > 1 ? 's' : ''}` : ''}</button></span>`;
+    btns += `<span title="${ex.ok ? 'Exploring ends the turn' : ex.reason}"><button class="primary" data-act="explore" ${ex.ok ? '' : 'disabled'}>Explore (E)${ex.bonus ? ` · +${ex.bonus} tile${ex.bonus > 1 ? 's' : ''}` : ''}</button></span>`;
     // disabled buttons swallow mouse events in some browsers, so the tooltip sits on a wrapper
     btns += `<span title="${fd.ok ? '' : fd.reason}"><button data-act="found" ${fd.ok ? '' : 'disabled'}>Found settlement (F) · ${ICON.food}${fd.cost}</button></span>`;
     if (siteReady) btns += `<button class="primary" data-act="site">Activate site (A)</button>`;
+    const here = g.settlements.find(c => c.x === x && c.y === y);
+    if (here && !here.upgrade) {
+      const offer = g.upgradeOffer();
+      for (const u of offer) {
+        const up = g.canUpgrade(here.id, u.id);
+        btns += `<span title="${up.ok ? u.desc : up.reason}"><button data-act="upgrade" data-sid="${here.id}" data-upgrade="${u.id}" data-tip="${u.desc}" ${up.ok ? '' : 'disabled'}>${u.icon} Upgrade: ${u.name} · ${ICON.wealth}${up.cost}</button></span>`;
+      }
+      if (!offer.length) ti.rows.push('<span class="dim">No upgrades available yet. Projects unlock them.</span>');
+    }
     el('info').innerHTML =
       `<h3>${ti.title} <span class="dim">${x},${y}</span></h3>` +
       ti.rows.map(r => `<div class="row">${r}</div>`).join('') +
@@ -191,18 +204,19 @@
   const OPTION_GROUPS = [
     ['Start', ['startFood', 'startMaterials', 'startWealth']],
     ['Settlements', ['settlementBaseCost', 'settlementCostGrowth', 'settlementClaimRadius']],
-    ['Exploring', ['exploreWealthPerTile', 'openFrontierRadius']],
+    ['Upgrades', ['upgradeCost', 'surveyPostTiles', 'shrineKeeperRadius', 'boundaryStoneReach']],
+    ['Exploring', ['openFrontierRadius']],
     ['Fog glimpses', ['glimpseBase', 'glimpseStep', 'glimpseMax', 'blightSightRange']],
     ['World generation (new game)', ['blobMin', 'blobVariance', 'blobFillChance', 'startSafeRadius', 'siteMinDistance',
-      'siteChance', 'featureChance', 'landThreshold', 'ringLandChance', 'desertThreshold', 'mountainBelow', 'forestBelow']],
+      'siteChance', 'featureChance', 'relicShare', 'landThreshold', 'ringLandChance', 'desertThreshold', 'mountainBelow', 'forestBelow']],
     ['Special features', ['tileFeatureAmount', 'allFeatureAmount']],
-    ['Projects', ['projectBase', 'projectGrowth', 'legacyPerDistance', 'tradeBonus', 'gloriousBonus', 'gloriousRadius']],
+    ['Projects', ['projectBase', 'projectGrowth', 'legacyPerDistance', 'tradeBonus', 'gloriousBonus', 'gloriousRadius', 'relicYield']],
     ['Ancient sites', ['siteOptionCount', 'siteBundleMin', 'siteBundleVariance',
       'siteExploreRadius', 'siteFeatureCount', 'siteFeatureRadius', 'cleanseRadius']],
     ['Blight', ['blightStart', 'blightEvery', 'blightSpawnRange', 'blightSpread']],
     ['Victory', ['winSettlements', 'winSites', 'winAscensions']],
   ];
-  const WORLD_KEYS = new Set(OPTION_GROUPS[4][1]);
+  const WORLD_KEYS = new Set(OPTION_GROUPS.find(([t]) => t.startsWith('World generation'))[1]);
   const optLabel = k => cap(k.replace(/([A-Z])/g, ' $1').toLowerCase());
 
   function saveOptions() {
@@ -270,14 +284,21 @@
     }
   }
   function doFound() { const c = centre(); if (g.found(c.x, c.y).ok) { CV.audio.play('settlement'); refresh(); } }
-  function doSite() { const k = K(centre().x, centre().y); if (g.sites.has(k) && !g.usedSites.has(k)) openSite(k); }
+  function doSite() { const k = K(centre().x, centre().y); if (g.sites.has(k) && !g.siteUsed(k)) openSite(k); }
 
   document.addEventListener('click', e => {
+    // A click on the backdrop dismisses the modal like its "later" button (the game-over modal stays).
+    if (e.target === el('modal') && modalKind && modalKind !== 'over') {
+      const later = el('modal').querySelector('[data-act="defer"], [data-act="close"]');
+      if (later) later.click(); else closeModal();
+      return;
+    }
     const b = e.target.closest('button'); if (!b) return;
     const a = b.dataset.act;
     if (a === 'explore') doExplore();
     else if (a === 'found') doFound();
     else if (a === 'site') doSite();
+    else if (a === 'upgrade') { if (g.upgrade(+b.dataset.sid, b.dataset.upgrade).ok) { CV.audio.play('project'); refresh(); } }
     else if (a === 'defer') { if (g.deferSite(+b.dataset.key).ok) { closeModal(); refresh(); } }
     else if (a === 'options') openOptions();
     else if (a === 'saveopts') saveOptionsForm();
@@ -456,7 +477,7 @@
         ctx.globalAlpha = 0.22; glyph(TYPE_ICON[t.type], cx, cy, 20 * z); ctx.globalAlpha = 1;
       }
       if (f) featureIcon(f, cx, cy + (t.site ? 9 : 0) * z, !!bl, z);
-      if (t.site) { ctx.globalAlpha = g.usedSites.has(k) ? 0.35 : 1; glyph('\u{1F5FF}', cx, cy - (f ? 9 : 0) * z, 26 * z); ctx.globalAlpha = 1; }
+      if (t.site) { ctx.globalAlpha = g.siteUsed(k) ? 0.35 : 1; glyph('\u{1F5FF}', cx, cy - (f ? 9 : 0) * z, 26 * z); ctx.globalAlpha = 1; }
       if (bl) {
         ctx.fillStyle = 'rgba(82,24,105,.82)'; ctx.fillRect(sx, sy, TS, TS);
         if (bl.pustule && g.taken.discernment) glyph('☣️', cx, cy, 30 * z);
@@ -467,6 +488,14 @@
       }
       const settlement = g.settlements.find(c => c.x === x && c.y === y);
       if (settlement) { village(cx, cy - 1 * z, z); }
+      // upgrade badge in the tile corner; fallen scavenger settlements keep theirs, dimmed
+      const badged = settlement || g.fallen.find(c => c.x === x && c.y === y);
+      const upIcon = badged && badged.upgrade && (CV.UPGRADES.find(u => u.id === badged.upgrade) || {}).icon;
+      if (upIcon) {
+        if (!settlement) ctx.globalAlpha = 0.6;
+        glyph(upIcon, sx + TS - 11 * z, sy + 11 * z, 16 * z);
+        ctx.globalAlpha = 1;
+      }
     } else {
       const gl = g.glimpse(x, y);
       let frontier = false;
@@ -487,7 +516,7 @@
     const top = el('top').offsetHeight + 20, bottom = H - el('panel').offsetHeight - 20, m = 28;
     arrowHits = [];
     for (const [k, s] of g.sites) {
-      if (g.usedSites.has(k)) continue;
+      if (g.siteUsed(k)) continue;
       const px = W / 2 + (s.x - cam.x) * TS, py = H / 2 + (s.y - cam.y) * TS;
       if (px >= 0 && px <= W && py >= top - 10 && py <= bottom + 10) continue;
       const ax = Math.min(Math.max(px, m), W - m), ay = Math.min(Math.max(py, top + m / 2), bottom - m / 2);

@@ -22,7 +22,7 @@ function play(seed, mode, maxTurns) {
     if (mode === 'bot') {
       // activate sites: prefer bundle when poor, cleanse when blight exists, else settlement/explore/features
       for (const [key] of g.sites) {
-        if (g.usedSites.has(key)) continue;
+        if (g.siteUsed(key)) continue;
         const offer = g.siteOffer(key);
         const order = g.blight.size ? ['cleanse', 'settlement', 'explore', 'features', 'bundle'] : ['settlement', 'explore', 'features', 'bundle', 'cleanse'];
         for (const id of order) if (g.activateSite(key, id).ok) break;
@@ -93,16 +93,31 @@ try {
     assert(!g.canExplore(3, 0).ok, 'cannot explore from a hidden tile');
     const e = [...Array(5)].map((_, i) => g.canExplore(2, i - 2));
     log('explore (2,*) -> ' + JSON.stringify(e.map(x => x.reason || 'ok')));
-    // exploring spends all wealth; each 10 spent reveals one extra adjacent tile
-    for (const w of [0, 9, 10, 35]) {
+    // wealth no longer affects exploring; each Survey Post upgrade reveals one extra adjacent tile
+    for (const posts of [0, 1, 2]) {
       const h = new CV.Game(5);
-      h.res.wealth = w;
-      const before = h.known.size, w0 = h.res.wealth;
+      h.res.wealth = 50;
+      h.settlements[0].upgrade = posts > 0 ? 'surveypost' : undefined;
+      if (posts > 1) h.settlements.push({ id: 99, x: 40, y: 40, founded: 1, upgrade: 'surveypost' });
+      const before = h.known.size;
       const r = h.explore(2, 0);
       const fresh = h.known.size - before;
-      assert(r.ok && h.res.wealth === 0, 'explore spends all wealth at ' + w0);
-      assert(r.bonus === Math.floor(w / 10), 'bonus at wealth ' + w + ': ' + r.bonus);
-      assert(fresh <= 9 + r.bonus && fresh >= r.bonus + 3, `wealth ${w} revealed ${fresh} new tiles`);
+      assert(r.ok && h.res.wealth === 50, 'explore keeps wealth');
+      assert(r.bonus === posts, `bonus with ${posts} posts: ${r.bonus}`);
+      assert(fresh <= 9 + r.bonus && fresh >= r.bonus + 3, `${posts} posts revealed ${fresh} new tiles`);
+    }
+    // upgrades: need the project, wealth, and only once per settlement
+    {
+      const h = new CV.Game(5);
+      h.res.wealth = 100;
+      assert(!h.canUpgrade(1, 'surveypost').ok, 'upgrade locked without cartography');
+      h.taken.cartography = 1;
+      const r = h.upgrade(1, 'surveypost');
+      assert(r.ok && h.res.wealth === 100 - CV.CFG.upgradeCost && h.settlements[0].upgrade === 'surveypost', 'upgrade applied and charged');
+      assert(!h.canUpgrade(1, 'surveypost').ok, 'cannot upgrade twice');
+      assert(CV.Game.restore(JSON.parse(JSON.stringify(h.serialize()))).settlements[0].upgrade === 'surveypost', 'upgrade survives save/load');
+      const p = new CV.Game(5); p.taken.cartography = 1; p.res.wealth = CV.CFG.upgradeCost - 1;
+      assert(!p.canUpgrade(1, 'surveypost').ok, 'upgrade needs wealth');
     }
     g.taken.wider = 1; g.claimAll(); assert(g.claimed.size === 25, 'wider claims 25, got ' + g.claimed.size);
   }

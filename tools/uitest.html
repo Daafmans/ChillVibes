@@ -40,7 +40,7 @@
         const kx = Math.floor((k + 65536) / 131072), ky = k - kx * 131072;
         if (g.canFound(kx, ky).ok && Math.max(Math.abs(kx), Math.abs(ky)) >= 5) { CV.ui.goto(kx, ky); click('[data-act=found]'); break; }
       }
-      for (const [k] of g.sites) if (!g.usedSites.has(k)) {
+      for (const [k] of g.sites) if (!g.siteUsed(k)) {
         const s = g.sites.get(k); CV.ui.goto(s.x, s.y); click('[data-act=site]');
         click('[data-opt=bundle]'); click('[data-act=close]');
       }

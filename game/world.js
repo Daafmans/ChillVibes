@@ -10,10 +10,16 @@
   }
 
   // Pick a feature valid on this base tile type from one uniform random. scale multiplies bonus amounts (not relics).
-  CV.makeFeature = function (u, type, scale) {
+  // The lowest relicShare of u picks a relic, the rest picks an ordinary tile feature.
+  // noRelics excludes relics entirely (used for features created by ancient sites).
+  CV.makeFeature = function (u, type, scale, noRelics) {
     scale = scale || 1;
-    const pool = CV.FEATURES.filter(f => f.on.includes(type));
-    const d = pool[Math.min(pool.length - 1, Math.floor(u * pool.length))];
+    const valid = CV.FEATURES.filter(f => f.on.includes(type) && !(noRelics && f.kind === 'relic'));
+    const relics = valid.filter(f => f.kind === 'relic'), tiles = valid.filter(f => f.kind !== 'relic');
+    const isRelic = relics.length && (!tiles.length || u < CFG.relicShare);
+    const pool = isRelic ? relics : tiles;
+    if (isRelic && tiles.length) u /= CFG.relicShare; else if (tiles.length && relics.length) u = (u - CFG.relicShare) / (1 - CFG.relicShare);
+    const d = pool[Math.min(pool.length - 1, Math.max(0, Math.floor(u * pool.length)))];
     const f = { id: d.id, name: d.name, kind: d.kind };
     if (d.kind === 'relic') f.color = d.color;
     else {

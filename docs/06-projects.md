@@ -50,5 +50,15 @@ Each line is one project. **Indentation is the tree**: a project is a child of t
   - forecast | Rot Forecast | Explored tiles that blight could spread to next turn are highlighted | - | no
   - discernment | Pustule Discernment | Tell pustules apart from ordinary blight | 1 black | no
     - burst | Pustule Burst | When exploring a tile with a pustule, the pustule is destroyed (the player is notified when this happens even if they don't have pustule discernment) | 2 black | no
-  - scavenge | Scavenge the Rot | Blighted tiles in your settlements still yield 1 food, 1 material and 1 wealth (features stay disabled) | 1 black | no
+  - scavenge | Scavenge the Rot | Unlocks the Scavenger settlement upgrade: every blighted tile claimed by the upgraded settlement yields 1 food, 1 material and 1 wealth (features stay disabled) | 1 black | no
+    - dwell | Dwell in the Rot | Scavenger settlements overcome by blight keep producing: their claimed tiles still yield. They still count as lost for the win and lose conditions | 2 black | no
   - fight | Blight Fight | When exploring, any blighted tiles that would be explored are cleansed | 1 black | no
+
+### Settlements
+
+- cartography | Cartography | Unlocks the Survey Post settlement upgrade: each exploration reveals 1 extra tile per upgraded settlement. | - | no
+- pilgrimage | Pilgrimage | Unlocks the Shrine Keeper settlement upgrade: every ancient site within 10 tiles of an upgraded settlement can be activated one additional time per such settlement. | - | no
+- landrights | Land Rights | Unlocks the Boundary Stones settlement upgrade: the upgraded settlement claims four additional tiles, one in each cardinal direction. | - | no
+- irrigation | Irrigation | Unlocks the Desert Bloom settlement upgrade: every desert tile claimed by the upgraded settlement yields 1 food, 1 material and 1 wealth. | - | no
+- craftsmanship | Craftsmanship | Unlocks the Artisan Quarter settlement upgrade: the bonuses of special tiles claimed by the upgraded settlement are doubled. | - | no
+- veneration | Relic Veneration | Every claimed tile with a relic yields 10 extra food, material and wealth. | - | no

@@ -10,13 +10,14 @@
       this.turn = 1;
       this.res = { food: CFG.startFood, materials: CFG.startMaterials, wealth: CFG.startWealth };
       this.settlements = [];
+      this.fallen = [];             // scavenger settlements overcome by blight (Dwell in the Rot): still claim and yield, but no longer count
       this.nextSettlementId = 1;
       this.claimed = new Map();     // tile key -> settlement id
       this.settlementTiles = new Map();   // settlement id -> [{x,y,k}]
       this.known = new Set();
       this.near = new Map();        // hidden tile key -> Chebyshev distance to nearest known tile (<= glimpseMax)
       this.sites = new Map();       // found ancient sites: key -> {x,y}
-      this.usedSites = new Set();
+      this.siteUses = new Map();    // site key -> times activated
       this.deferredSites = new Set(); // activated sites whose benefit is still to be chosen
       this.siteOffers = new Map();
       this.overrides = new Map();   // features added by ancient sites
@@ -35,8 +36,8 @@
     serialize() {
       return {
         seed: this.seed, rng: this.rng.getState(), turn: this.turn, res: this.res,
-        settlements: this.settlements, nextSettlementId: this.nextSettlementId,
-        known: [...this.known], near: [...this.near], sites: [...this.sites], usedSites: [...this.usedSites],
+        settlements: this.settlements, fallen: this.fallen, nextSettlementId: this.nextSettlementId,
+        known: [...this.known], near: [...this.near], sites: [...this.sites], siteUses: [...this.siteUses],
         deferredSites: [...this.deferredSites], overrides: [...this.overrides], blight: [...this.blight], taken: this.taken,
         projectCount: this.projectCount, threshold: this.threshold,
         exploredThisTurn: this.exploredThisTurn, over: this.over, log: this.log,
@@ -45,8 +46,8 @@
     static restore(s) {
       const g = new Game(s.seed);
       g.rng.setState(s.rng); g.turn = s.turn; g.res = s.res;
-      g.settlements = s.settlements; g.nextSettlementId = s.nextSettlementId;
-      g.known = new Set(s.known); g.near = new Map(s.near); g.sites = new Map(s.sites); g.usedSites = new Set(s.usedSites);
+      g.settlements = s.settlements; g.fallen = s.fallen || []; g.nextSettlementId = s.nextSettlementId;
+      g.known = new Set(s.known); g.near = new Map(s.near); g.sites = new Map(s.sites); g.siteUses = new Map(s.siteUses || (s.usedSites || []).map(k => [k, 1]));
       g.deferredSites = new Set(s.deferredSites || []);
       g.overrides = new Map(s.overrides); g.blight = new Map(s.blight); g.taken = s.taken;
       g.projectCount = s.projectCount; g.threshold = s.threshold;
@@ -111,7 +112,7 @@
     claimAll() {
       this.claimed.clear(); this.settlementTiles = new Map();
       const r = CFG.settlementClaimRadius, corners = !!this.taken.wider;
-      for (const c of this.settlements) {
+      for (const c of this.settlements.concat(this.fallen)) {
         const arr = []; this.settlementTiles.set(c.id, arr);
         for (let dx = -r; dx <= r; dx++) for (let dy = -r; dy <= r; dy++) {
           if (!corners && Math.abs(dx) + Math.abs(dy) > 2 * r - 1) continue;
@@ -121,7 +122,19 @@
           this.reveal(x, y);
         }
       }
+      // Boundary Stones: the four tiles straight out from the settlement, claimed after every settlement's regular tiles
+      const reach = CFG.boundaryStoneReach;
+      for (const c of this.settlements.concat(this.fallen)) {
+        if (c.upgrade !== 'boundarystones') continue;
+        for (const [dx, dy] of [[0, -1], [1, 0], [0, 1], [-1, 0]]) {
+          const x = c.x + dx * reach, y = c.y + dy * reach, k = K(x, y);
+          if (this.claimed.has(k)) continue;
+          this.claimed.set(k, c.id); this.settlementTiles.get(c.id).push({ x, y, k });
+          this.reveal(x, y);
+        }
+      }
     }
+    settlementById(id) { return this.settlements.find(s => s.id === id) || this.fallen.find(s => s.id === id); }
     addSettlement(x, y) {
       this.settlements.push({ id: this.nextSettlementId++, x, y, founded: this.turn });
       this.claimAll();
@@ -152,9 +165,31 @@
       return c;
     }
 
+    // ---------- upgrades ----------
+    upgradeOffer() { return CV.UPGRADES.filter(u => this.taken[u.project]); }
+    upgradeCount(id) { return this.settlements.filter(c => c.upgrade === id).length; }
+    canUpgrade(sid, uid) {
+      const cost = CFG.upgradeCost, c = this.settlements.find(s => s.id === sid);
+      if (this.over) return { ok: false, cost, reason: 'Game over' };
+      if (!c) return { ok: false, cost, reason: 'No settlement here' };
+      if (c.upgrade) return { ok: false, cost, reason: 'Already upgraded' };
+      if (!this.upgradeOffer().some(u => u.id === uid)) return { ok: false, cost, reason: 'Not unlocked' };
+      if (this.res.wealth < cost) return { ok: false, cost, reason: `Need ${cost} wealth` };
+      return { ok: true, cost };
+    }
+    upgrade(sid, uid) {
+      const c = this.canUpgrade(sid, uid);
+      if (!c.ok) return c;
+      this.res.wealth -= c.cost;
+      this.settlements.find(s => s.id === sid).upgrade = uid;
+      if (uid === 'boundarystones') this.claimAll();
+      this.say(`Settlement #${sid} upgraded: ${CV.UPGRADES.find(u => u.id === uid).name}.`);
+      return c;
+    }
+
     // ---------- exploring ----------
-    // Exploring spends all wealth; every exploreWealthPerTile of it reveals one extra tile.
-    exploreBonus() { return Math.floor(this.res.wealth / CFG.exploreWealthPerTile); }
+    // Each Survey Post reveals extra tiles next to the 3x3 patch on every exploration.
+    exploreBonus() { return this.upgradeCount('surveypost') * CFG.surveyPostTiles; }
     // Hidden tiles touching the revealed patch, nearest the target first (seeded tie-break).
     extraTiles(x, y, n) {
       const patch = new Set();
@@ -201,7 +236,6 @@
       const c = this.canExplore(x, y);
       if (!c.ok) return c;
       this.exploredThisTurn = true;
-      this.res.wealth = 0; // exploring spends all wealth; the remainder is lost too
       let cleansed = 0;
       const tiles = this.extraTiles(x, y, c.bonus);
       for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) tiles.push([x + dx, y + dy]);
@@ -227,12 +261,28 @@
     tileYield(x, y) {
       const out = {};
       if (this.blight.has(K(x, y))) {
-        if (this.taken.scavenge && this.claimed.has(K(x, y))) RES.forEach(r => out[r] = 1);
+        const owner = this.settlementById(this.claimed.get(K(x, y)));
+        if (owner && owner.upgrade === 'scavenger') RES.forEach(r => out[r] = 1);
         return out;
       }
-      Object.assign(out, BASE_YIELD[this.world.tile(x, y).type]);
+      const type = this.world.tile(x, y).type;
+      Object.assign(out, BASE_YIELD[type]);
+      // Desert Bloom: desert tiles claimed by an upgraded settlement yield 1 of each resource
+      if (type === 'desert') {
+        const owner = this.settlementById(this.claimed.get(K(x, y)));
+        if (owner && owner.upgrade === 'desertbloom') RES.forEach(r => out[r] = 1);
+      }
       const f = this.feature(x, y);
-      if (f && f.kind === 'tile') for (const r of [].concat(f.res)) out[r] = (out[r] || 0) + f.amount;
+      if (f && f.kind === 'tile') {
+        // Artisan Quarter: special tile bonuses are doubled for the owning settlement
+        const owner = this.settlementById(this.claimed.get(K(x, y)));
+        const mult = owner && owner.upgrade === 'artisanquarter' ? 2 : 1;
+        for (const r of [].concat(f.res)) out[r] = (out[r] || 0) + f.amount * mult;
+      }
+      // Relic Veneration: claimed relic tiles yield extra of each resource
+      if (f && f.kind === 'relic' && this.taken.veneration && this.claimed.has(K(x, y))) {
+        RES.forEach(r => out[r] = (out[r] || 0) + CFG.relicYield);
+      }
       return out;
     }
     income() {
@@ -255,6 +305,11 @@
           RES.forEach(r => tot[r] += CFG.gloriousBonus * glor * n);
         }
       });
+      // Dwell in the Rot: fallen settlements keep yielding from their tiles, without trade or capital bonuses
+      for (const c of this.fallen) for (const t of this.settlementTiles.get(c.id) || []) {
+        const y = this.tileYield(t.x, t.y);
+        for (const r in y) tot[r] += y[r];
+      }
       return tot;
     }
     relicCount(color) {
@@ -294,6 +349,12 @@
 
     // ---------- ancient sites ----------
     legacyScale(x, y) { return 1 + (this.taken.legacy || 0) * cheb(x, y, 0, 0) * CFG.legacyPerDistance; }
+    // A site can be activated once, plus once more per Shrine Keeper settlement within range.
+    siteAllowed(key) {
+      const s = this.sites.get(key);
+      return 1 + this.settlements.filter(c => c.upgrade === 'shrinekeeper' && cheb(c.x, c.y, s.x, s.y) <= CFG.shrineKeeperRadius).length;
+    }
+    siteUsed(key) { return (this.siteUses.get(key) || 0) >= this.siteAllowed(key); }
     siteOffer(key) {
       let o = this.siteOffers.get(key);
       if (o) return o;
@@ -311,12 +372,12 @@
     }
     siteOptionStatus(key, opt) {
       const s = this.sites.get(key);
-      if (this.usedSites.has(key)) return 'Used';
+      if (this.siteUsed(key)) return 'Used';
       if (opt.id === 'settlement') { const p = this.placeProblem(s.x, s.y); if (p) return p; }
       return null;
     }
     deferSite(key) {
-      if (!this.sites.has(key) || this.usedSites.has(key) || this.over) return { ok: false, reason: 'Unavailable' };
+      if (!this.sites.has(key) || this.siteUsed(key) || this.over) return { ok: false, reason: 'Unavailable' };
       this.deferredSites.add(key);
       this.say('Ancient site activated: choose its benefit later.');
       return { ok: true };
@@ -342,7 +403,7 @@
         while (placed < CFG.siteFeatureCount && tries++ < 200) {
           const x = s.x + Math.floor(rng() * (2 * fr + 1)) - fr, y = s.y + Math.floor(rng() * (2 * fr + 1)) - fr, t = this.world.tile(x, y);
           if (t.site || this.feature(x, y) || (x === s.x && y === s.y)) continue;
-          this.overrides.set(K(x, y), CV.makeFeature(rng(), t.type, sc));
+          this.overrides.set(K(x, y), CV.makeFeature(rng(), t.type, sc, true));
           placed++;
         }
         this.say('Ancient site: two special features appeared nearby.');
@@ -354,7 +415,7 @@
         for (const [k, b] of [...this.blight]) if (cheb(b.x, b.y, s.x, s.y) <= CFG.cleanseRadius) { this.blight.delete(k); n++; }
         this.say(`Ancient site: ${n} blighted tiles cleansed.`);
       }
-      this.usedSites.add(key);
+      this.siteUses.set(key, (this.siteUses.get(key) || 0) + 1);
       this.deferredSites.delete(key);
       return { ok: true };
     }
@@ -432,7 +493,9 @@
       for (const c of [...this.settlements]) {
         if (this.blight.has(K(c.x, c.y))) {
           this.settlements.splice(this.settlements.indexOf(c), 1);
-          this.say(`The settlement at ${c.x},${c.y} was lost to blight!`);
+          const dwells = this.taken.dwell && c.upgrade === 'scavenger';
+          if (dwells) this.fallen.push(c);
+          this.say(`The settlement at ${c.x},${c.y} was lost to blight!${dwells ? ' Its tiles still yield.' : ''}`);
         }
       }
       if (!this.settlements.length) { this.over = { won: false, turn: this.turn }; return; }

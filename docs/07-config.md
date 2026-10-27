@@ -18,11 +18,19 @@ All tunable gameplay numbers live in `CV.CFG` in `game/config.js`. Every value i
 | `settlementCostGrowth` | 1.45 | Cost multiplier per existing settlement |
 | `settlementClaimRadius` | 2 | Base border radius (diamond); Wider Borders also claims the corners of the surrounding square |
 
+## Upgrades
+
+| Key | Default | Description |
+|---|---|---|
+| `upgradeCost` | 30 | Wealth cost of a settlement upgrade (once per settlement) |
+| `surveyPostTiles` | 1 | Survey Post: extra tiles revealed by each exploration, per upgraded settlement |
+| `boundaryStoneReach` | 3 | Boundary Stones: distance of the extra claimed tile in each cardinal direction |
+| `shrineKeeperRadius` | 10 | Shrine Keeper: ancient sites within this Chebyshev distance get one extra activation per Shrine Keeper |
+
 ## Exploring
 
 | Key | Default | Description |
 |---|---|---|
-| `exploreWealthPerTile` | 10 | Exploring spends all wealth; each 10 spent reveals one extra tile |
 | `openFrontierRadius` | 20 | Open Frontier: explore this far (Chebyshev) from a settlement |
 
 ## Fog glimpses
@@ -47,6 +55,7 @@ Surveyor's Eye, Omen Reading, Ancient Sight, Blight Sight. Range = `base + step 
 | `siteMinDistance` | 3 | Ancient sites appear no closer than this to the start |
 | `siteChance` | 0.008 | Per-tile chance of an ancient site |
 | `featureChance` | 0.08 | Per-tile chance of a special feature |
+| `relicShare` | 0.08 | Fraction of special features that are relics (on tile types where a relic can appear) |
 | `landThreshold` | 0.40 | Elevation needed for land |
 | `ringLandChance` | 0.5 | Chance for land right around the start blob |
 | `desertThreshold` | 0.70 | Desert-noise level above which land becomes desert |
@@ -70,6 +79,7 @@ Surveyor's Eye, Omen Reading, Ancient Sight, Blight Sight. Range = `base + step 
 | `tradeBonus` | 1 | Each of food/materials/wealth per Trade Empire copy per touching settlement |
 | `gloriousBonus` | 3 | Per Glorious Capital copy, per other settlement within the radius |
 | `gloriousRadius` | 10 | Radius for Glorious Capital |
+| `relicYield` | 10 | Extra food, material and wealth from each claimed relic tile, with Relic Veneration |
 
 ## Ancient sites
 
@@ -154,5 +164,6 @@ Each entry also has a `parent` id (`null` for roots); the tree itself is in `06-
 | Blight | Pustule Discernment | no | 1 black |
 | Blight | Rot Forecast | no | – |
 | Blight | Scavenge the Rot | no | 1 black |
+| Blight | Dwell in the Rot | no | 2 black |
 | Blight | Blight Fight | no | 1 black |
 | Blight | Pustule Burst | no | 2 black |

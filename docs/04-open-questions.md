@@ -10,7 +10,7 @@ Decisions made while building the vertical slice (`game/`). Everything here is c
 - Win targets are 20 settlements / 20 sites / 10 Ascensions. Pustule Burst is one-time. The glimpsed state is always shown.
 
 ## Assumptions I made (please confirm or correct)
-1. **Exploration spends all Wealth and widens by it.** Exploring reveals the 3×3 patch plus `floor(wealth / 10)` extra tiles (`exploreWealthPerTile = 10`), then sets Wealth to 0, remainder included. Extras are hidden tiles touching the revealed area, nearest the picked tile first, ties broken by a seeded hash. Exploring with under 10 Wealth is still allowed and just reveals the 3×3.
+1. **Exploration is free and fixed.** Exploring reveals the 3×3 patch plus one extra tile per Survey Post upgrade (`surveyPostTiles`). Extras are hidden tiles touching the revealed area, nearest the picked tile first, ties broken by a seeded hash. Wealth is spent on settlement upgrades, not exploration.
 2. **One exploration per turn.** Founding settlements, projects and sites are unlimited per turn.
 3. **Projects spend Materials.** Taking one pays the current threshold, then the threshold grows ×1.4 (start 60). Every unlocked project in the tree is offered (plus Ascension); children unlock when their parent is taken.
 4. **Settlement cost** = `ceil(40 * 1.45^(owned settlements - 1))` Food. Losing a settlement makes the next one cheaper.
@@ -27,5 +27,5 @@ Decisions made while building the vertical slice (`game/`). Everything here is c
 15. **Starting yields are lopsided** because they follow the terrain (a mountain start gives lots of Materials and little Wealth). This matches the design but may feel unfair.
 
 ## Still open
-- **Glorious Capital and Trade Empire** make the economy grow roughly quadratically. Wealth no longer piles up, since each exploration empties it.
+- **Glorious Capital and Trade Empire** make the economy grow roughly quadratically. Wealth accumulates until spent on upgrades, and only one upgrade per settlement exists, so it may pile up.
 - **Site density** is 0.8% of land tiles. "Find 20 sites" looks like the hard win; "20 settlements" looks the easiest.

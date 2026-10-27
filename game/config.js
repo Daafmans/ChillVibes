@@ -9,8 +9,13 @@
     settlementBaseCost: 40, settlementCostGrowth: 1.45,       // food; cost = ceil(base * growth^(settlements-1))
     settlementClaimRadius: 2,                           // base border radius (diamond); Wider Borders also claims the corners of the surrounding square
 
+    // --- Upgrades ---
+    upgradeCost: 30,                              // wealth; a settlement can be upgraded once
+    shrineKeeperRadius: 10,                       // Shrine Keeper: ancient sites within this Chebyshev distance gets one extra activation per Shrine Keeper in range
+    boundaryStoneReach: 3,                        // Boundary Stones: the settlement also claims the tile this far out in each cardinal direction
+    surveyPostTiles: 1,                           // Survey Post: extra tiles revealed by each exploration, per upgraded settlement
+
     // --- Exploring ---
-    exploreWealthPerTile: 10,                     // exploring spends all wealth; each 10 spent reveals one extra tile
     openFrontierRadius: 20,                       // Open Frontier: explore this far (Chebyshev) from a settlement
 
     // --- Fog glimpses (Surveyor's Eye, Omen Reading, Ancient Sight, Blight Sight) ---
@@ -23,6 +28,7 @@
     startSafeRadius: 2,                           // no features within this Chebyshev distance of the start (exclusive)
     siteMinDistance: 3,                           // ancient sites appear no closer than this to the start
     siteChance: 0.008, featureChance: 0.08,       // per-tile chance of an ancient site / special feature
+    relicShare: 0.08,                             // fraction of special features that are relics (where a relic is possible)
     landThreshold: 0.40, ringLandChance: 0.5,     // elevation needed for land; chance for land right around the start blob
     desertThreshold: 0.70,                        // desert-noise level above which land becomes desert
     mountainBelow: 0.32, forestBelow: 0.66,       // land noise bands: mountains < forest < plains
@@ -35,7 +41,8 @@
     projectBase: 60, projectGrowth: 1.4,          // materials threshold, multiplied by growth after each project
     legacyPerDistance: 0.05,                      // site benefit scale += this * distance from start, per Legacy copy
     tradeBonus: 1,                                // each of food/materials/wealth per Trade Empire copy per touching settlement
-    gloriousBonus: 3, gloriousRadius: 10,         // per Glorious Capital copy, per other settlement within the radius
+    relicYield: 10,                               // Relic Veneration: extra of each resource from a claimed relic tile
+    gloriousBonus: 3, gloriousRadius: 10,        // per Glorious Capital copy, per other settlement within the radius
 
     // --- Ancient sites ---
     siteOptionCount: 3,                           // benefits offered per site (plus the always-offered bundle)
@@ -96,6 +103,21 @@
     ocean: { food: 2 },
     desert: {},
   };
+  // Settlement upgrades. A settlement can take one, once, for CFG.upgradeCost wealth; each is offered only once its project is taken.
+  CV.UPGRADES = [
+    { id: 'surveypost', name: 'Survey Post', project: 'cartography', icon: '\u{1F52D}',
+      get desc() { return `Each exploration reveals ${CV.CFG.surveyPostTiles} extra tile${CV.CFG.surveyPostTiles === 1 ? '' : 's'} per settlement with this upgrade.`; } },
+    { id: 'shrinekeeper', name: 'Shrine Keeper', project: 'pilgrimage', icon: '\u{26E9}\u{FE0F}',
+      get desc() { return `Every ancient site within ${CV.CFG.shrineKeeperRadius} tiles can be activated one additional time. Stacks with other Shrine Keepers in range.`; } },
+    { id: 'boundarystones', name: 'Boundary Stones', project: 'landrights', icon: '\u{1FAA8}',
+      get desc() { return `The settlement also claims the tile ${CV.CFG.boundaryStoneReach} steps away in each of the four cardinal directions.`; } },
+    { id: 'desertbloom', name: 'Desert Bloom', project: 'irrigation', icon: '\u{1F33A}',
+      desc: 'Every desert tile claimed by this settlement yields 1 food, 1 material and 1 wealth.' },
+    { id: 'artisanquarter', name: 'Artisan Quarter', project: 'craftsmanship', icon: '\u{1F3FA}',
+      desc: 'The bonuses of special tiles claimed by this settlement are doubled.' },
+    { id: 'scavenger', name: 'Scavenger', project: 'scavenge', icon: '\u{1F9B4}',
+      desc: 'Every blighted tile claimed by this settlement yields 1 food, 1 material and 1 wealth (features stay disabled).' },
+  ];
   CV.PROJECTS = [
     // Always offered (no parent), repeatable, does not raise the cost of the next project or count as a regular project
     { id: 'ascension', cat: 'Victory', name: 'Ascension', parent: null, multi: true, relic: null, ascension: true,
