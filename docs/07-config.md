@@ -24,6 +24,8 @@ All tunable gameplay numbers live in `CV.CFG` in `game/config.js`. Every value i
 |---|---|---|
 | `upgradeCost` | 30 | Wealth cost of a settlement upgrade (once per settlement) |
 | `surveyPostTiles` | 1 | Survey Post: extra tiles revealed by each exploration, per upgraded settlement |
+| `wayfinderTiles` | 2 | Wayfinders: hidden tiles each Survey Post reveals per turn (closest first) |
+| `wayfinderMaxRadius` | 30 | Wayfinders: furthest (Chebyshev) a Survey Post looks for hidden tiles |
 | `relicSiteMaterials` | 2 | Relic Restoration: materials per turn from each ancient site claimed by an Artisan Quarter |
 | `relicRuinsWealth` | 2 | Relic Restoration: wealth per turn from each ruins tile claimed by an Artisan Quarter |
 | `shrineKeeperRadius` | 10 | Shrine Keeper: ancient sites within this Chebyshev distance get one extra activation per Shrine Keeper |
@@ -44,7 +46,6 @@ Surveyor's Eye, Omen Reading, Ancient Sight, Blight Sight. Range = `base + step 
 | `glimpseBase` | 1 | Base range |
 | `glimpseStep` | 1 | Extra range per additional copy |
 | `glimpseMax` | 15 | Maximum range |
-| `blightSightRange` | 1 | Range of Blight Sight |
 
 ## World generation
 
@@ -64,7 +65,12 @@ Surveyor's Eye, Omen Reading, Ancient Sight, Blight Sight. Range = `base + step 
 | `forestBelow` | 0.66 | Land noise below this (and above mountains) is forest; above is plains |
 | `templeMinDistance` | 600 | Every Ancient Temple tile is at least this far (Chebyshev) from the start |
 | `templeMaxDistance` | 800 | …and at most this far |
-| `ruinsChance` | 0.01 | Per-tile chance of Ruins on a land tile with no other feature or site |
+| `ruinTrailStartMin` | 6 | The first ruin of the trail lies at least this far (straight line) from the start |
+| `ruinTrailStartMax` | 12 | …and at most this far |
+| `ruinStepMin` | 15 | Shortest distance from one trail ruin to the next |
+| `ruinStepMax` | 30 | Longest distance from one trail ruin to the next |
+| `ruinWander` | 1.0 | Radians each trail step may turn away from the direction of the temple |
+| `ruinLandSearch` | 6 | A trail point in the sea moves to the nearest land within this range (Chebyshev), or is skipped |
 
 ## Special features
 
@@ -116,6 +122,7 @@ Surveyor's Eye, Omen Reading, Ancient Sight, Blight Sight. Range = `base + step 
 | `winSettlements` | 20 | Settlements needed to win |
 | `winSites` | 20 | Ancient sites needed to win |
 | `winUpgrades` | 20 | Economic Dominion: upgraded settlements (still standing) needed to win |
+| `winAwakened` | 20 | Ancient Rites: ancient site awakenings needed to win |
 
 ## Other constants (not in `CV.CFG`)
 
@@ -145,7 +152,7 @@ Surveyor's Eye, Omen Reading, Ancient Sight, Blight Sight. Range = `base + step 
 | Hot Springs | settlement | mountains, forest | – |
 | Natural Harbour | settlement | plains, desert, mountains | – |
 | Buried Aquifer | tile (hidden until Deep Wells) | plains, forest, mountains, desert | food, materials, wealth |
-| Ruins | ruins | plains, forest, mountains, desert | none; with Ruin Lore points toward the Ancient Temple |
+| Ruins | ruins | plains, forest, mountains, desert | none; with Ruin Lore points toward the next ruins of the trail (the last toward the Ancient Temple) |
 
 ### Projects (`CV.PROJECTS`)
 

@@ -59,6 +59,13 @@
       [293.66, 349.23, 440, 587.33].forEach((f, i) => tone(f, 0.25 + i * 0.12, 0.9, { type: 'triangle', gain: 0.22 }));
       [1174.7, 1396.9, 1760].forEach((f, i) => tone(f, 0.75 + i * 0.1, 0.7, { type: 'sine', gain: 0.12 }));
     },
+    // Warm bell on a low fifth, then a quick rising cascade: an ancient site's power is released.
+    siteActivate() {
+      tone(146.83, 0, 1.1, { type: 'sine', gain: 0.3 });
+      tone(220, 0, 0.9, { type: 'triangle', gain: 0.15 });
+      [587.33, 739.99, 880, 1174.66, 1479.98].forEach((f, i) => tone(f, 0.08 + i * 0.06, 0.45, { type: 'triangle', gain: 0.16 }));
+      tone(1760, 0.4, 0.8, { type: 'sine', gain: 0.1 });
+    },
     blip() { tone(660, 0, 0.08, { type: 'sine', gain: 0.3 }); },
   };
 

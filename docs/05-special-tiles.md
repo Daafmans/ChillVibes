@@ -32,11 +32,11 @@ These are generated with the world but don't exist in play (no bonus, not shown,
 | Plains, Forest, Mountains, Desert | Buried Aquifer | Tile +2 food, +2 materials, +2 wealth | Deep Wells  |
 
 ### Ruins
-Ruins give **no bonus**. They roll separately (`ruinsChance`), only on land tiles with no other feature or ancient site, and are never created by an ancient site's "two special features" benefit. Once *Ruin Lore* is taken, each Ruins tile shows the cardinal direction toward the Ancient Temple (see `03-systems.md`, section 8).
+Ruins give **no bonus**. They are not rolled per tile: they form one trail from near the start to the Ancient Temple, on land only, and replace any other feature or ancient site on their tile. They are never created by an ancient site's "two special features" benefit. Once *Ruin Lore* is taken, each Ruins tile shows the cardinal direction toward the next ruin of the trail, and the last one toward the Ancient Temple (see `03-systems.md`, section 8).
 
 | Base tile                         | Name  | Bonuses | Effect                                            |
 | --------------------------------- | ----- | ------- | ------------------------------------------------- |
-| Plains, Forest, Mountains, Desert | Ruins | none    | With *Ruin Lore*: points toward the Ancient Temple |
+| Plains, Forest, Mountains, Desert | Ruins | none    | With *Ruin Lore*: points toward the next ruins     |
 
 ## Notes
 - **Omen Reading** reveals that *a* feature exists on a fogged tile, not which one.

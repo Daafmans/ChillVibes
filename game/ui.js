@@ -9,6 +9,9 @@
   const SETTLEMENT_COLORS = ['#ffd166', '#ef8354', '#9d8df1', '#4fd0d0', '#f28fad', '#b8e986', '#f6e27a', '#6ea8ff'];
   const el = id => document.getElementById(id);
   const canvas = el('map'), ctx = canvas.getContext('2d');
+  const RUINS_IMG = new Image(); // resolved against this script, so pages outside game/ (tools/uitest.html) find it too
+  RUINS_IMG.onload = () => { dirty = true; };
+  RUINS_IMG.src = new URL('assets/ruins.svg', document.currentScript.src).href;
 
   let g, cam = { x: 0, y: 0 }, target = { x: 0, y: 0 }, dirty = true, infoKey = null, W = 0, H = 0, dpr = 1;
   let modalKind = null, offerShownFor = -1, arrowHits = [];
@@ -32,14 +35,17 @@
   const randomSeed = () => Math.floor(Math.random() * 1e6) + 1;
   const fmt = y => RES.filter(r => y[r]).map(r => `${ICON[r]}${y[r]}`).join(' ') || '—';
   const cap = s => s[0].toUpperCase() + s.slice(1);
-  const centre = () => ({ x: Math.round(cam.x), y: Math.round(cam.y) });
+  // the selected tile is where the camera is heading, so it changes at once rather than passing through each tile on the way
+  const centre = () => ({ x: Math.round(target.x), y: Math.round(target.y) });
 
   const ARROW = { north: '⬆', south: '⬇', east: '➡', west: '⬅' };
   function featureText(f, x, y) {
     if (!f) return '';
     if (f.kind === 'ruins') {
-      return g.taken.ruinlore ? `\u{1F3DA}️ Ruins. Their carvings point ${g.ruinDirection(x, y)}, toward the Ancient Temple.`
-        : '\u{1F3DA}️ Ruins. Their carvings mean nothing to you yet.';
+      const img = `<img class="ico" src="${RUINS_IMG.src}" alt="">`;
+      const to = g.ruinTarget(x, y) === g.world.temple ? 'the Ancient Temple' : 'more ruins';
+      return g.taken.ruinlore ? `${img} Ruins. Their carvings point ${g.ruinDirection(x, y)}, toward ${to}.`
+        : `${img} Ruins. Their carvings mean nothing to you yet.`;
     }
     return `${f.name}. Tile bonus: +${f.amount} ${[].concat(f.res).map(r => ICON[r]).join('')}`;
   }
@@ -58,6 +64,7 @@
       `<span class="pill dim">Settlements <b>${p.settlements}/${CFG.winSettlements}</b></span>` +
       `<span class="pill dim">Sites <b>${p.sites}/${CFG.winSites}</b></span>` +
       (g.taken.dominion ? `<span class="pill dim">Upgraded <b>${p.upgrades}/${CFG.winUpgrades}</b></span>` : '') +
+      (g.taken.rites ? `<span class="pill dim">Awakened <b>${p.awakened}/${CFG.winAwakened}</b></span>` : '') +
       `<span class="pill dim">\u{1F3DB}️ Temple <b>${g.templeFound() ? 'found' : 'not found'}</b></span>` +
       `<span class="pill ${g.turn >= CFG.blightStart ? 'warn' : 'dim'}">☣ ${g.turn >= CFG.blightStart ? `next pustule: turn ${next}` : `blight begins turn ${CFG.blightStart}`}</span>`;
   }
@@ -76,15 +83,21 @@
       title = `Settlement #${settlement.id} — ${cap(t.type)}`;
       const up = CV.UPGRADES.find(u => u.id === settlement.upgrade);
       if (up) rows.push(`${up.icon} Upgrade: ${up.name}. ${up.desc}`);
+      rows.push(`Settlement yield: <b>${fmt(g.settlementYield(settlement))}</b> per turn`);
+    }
+    const ruin = g.fallen.find(c => c.x === x && c.y === y);
+    if (ruin) {
+      title = `Settlement #${ruin.id} (destroyed) — ${cap(t.type)}`;
+      const up = CV.UPGRADES.find(u => u.id === ruin.upgrade);
+      if (up) rows.push(`${up.icon} Was: ${up.name}.`);
+      rows.push(`<span class="warn">Destroyed by blight. It keeps its land, but ${g.taken.dwell && ruin.upgrade === 'scavenger' ? 'only its blighted tiles yield' : 'produces nothing'}.</span>`);
     }
     const bl = g.blight.get(k);
     const seesBlight = known || (gl && gl.blight);
     if (bl && seesBlight) {
-      rows.push(bl.pustule && g.taken.discernment ? '<span class="warn">☣ Pustule — the source of the blight</span>' : `<span class="warn">☣ Blighted — ${(g.settlementById(cid) || {}).upgrade === 'scavenger' ? 'features disabled' : 'produces nothing'}</span>`);
+      rows.push(bl.pustule && g.taken.discernment ? '<span class="warn">☣ Pustule — the source of the blight</span>' : `<span class="warn">☣ Blighted — ${Object.keys(g.tileYield(x, y)).length ? 'features disabled' : 'produces nothing'}</span>`);
     }
-    if (known && !bl && risk().has(k)) rows.push('<span class="warn">⚠ Blight may spread here next turn</span>');
     if (known) {
-      if (cid) rows.push(`Claimed by settlement #${cid}`);
       rows.push(`Yield: ${fmt(g.tileYield(x, y))}${bl ? ' (blighted)' : ''}`);
       const f = g.feature(x, y);
       if (f) rows.push(featureText(f, x, y) + (bl ? ' <span class="warn">(disabled)</span>' : ''));
@@ -122,7 +135,7 @@
       if (!offer.length) ti.rows.push('<span class="dim">No upgrades available yet. Projects unlock them.</span>');
     }
     el('info').innerHTML =
-      `<h3>${ti.title} <span class="dim">${x},${y}</span></h3>` +
+      `<h3>${ti.title}</h3>` +
       ti.rows.map(r => `<div class="row">${r}</div>`).join('') +
       `<div class="btns">${btns}</div>`;
   }
@@ -193,6 +206,7 @@
       settlement: ['Settle the site', 'A free settlement is founded on the site tile.'],
       cleanse: ['Cleanse', `Remove all blight, pustules included, within ${CFG.cleanseRadius} tiles.`],
       bundle: ['Offerings', 'A store of one resource.'],
+      awaken: ['Awaken', `No benefit, but counts toward the ${CFG.winAwakened} awakenings needed to win (${g.awakened} so far).`],
     };
     const cards = offer.options.map(o => {
       const bad = g.siteOptionStatus(key, o);
@@ -201,7 +215,7 @@
         <div class="t">${label[o.id][0]}</div><div>${label[o.id][1]}${extra}</div>
         ${bad ? `<div class="need warn">${bad}</div>` : ''}</button>`;
     }).join('');
-    openModal(`<div class="sheet"><h3>\u{1F5FF} Ancient site at ${offer.x},${offer.y}</h3>
+    openModal(`<div class="sheet"><h3>\u{1F5FF} Ancient site</h3>
       <div class="dim">Pick one benefit. A site can be activated once.</div>
       <div class="cards">${cards}</div><div class="btns">${g.deferredSites.has(key)
         ? '<button data-act="close">Close</button>'
@@ -214,18 +228,18 @@
   const OPTION_GROUPS = [
     ['Start', ['startFood', 'startMaterials', 'startWealth']],
     ['Settlements', ['settlementBaseCost', 'settlementCostGrowth', 'settlementClaimRadius']],
-    ['Upgrades', ['upgradeCost', 'surveyPostTiles', 'shrineKeeperRadius', 'relicSiteMaterials', 'relicRuinsWealth']],
+    ['Upgrades', ['upgradeCost', 'surveyPostTiles', 'wayfinderTiles','shrineKeeperRadius', 'relicSiteMaterials', 'relicRuinsWealth']],
     ['Exploring', ['openFrontierRadius']],
-    ['Fog glimpses', ['glimpseBase', 'glimpseStep', 'glimpseMax', 'blightSightRange']],
+    ['Fog glimpses', ['glimpseBase', 'glimpseStep', 'glimpseMax']],
     ['World generation (new game)', ['blobMin', 'blobVariance', 'blobFillChance', 'startSafeRadius', 'siteMinDistance',
       'siteChance', 'featureChance','landThreshold', 'ringLandChance', 'desertThreshold', 'mountainBelow', 'forestBelow',
-      'templeMinDistance', 'templeMaxDistance', 'ruinsChance']],
+      'templeMinDistance', 'templeMaxDistance', 'ruinTrailStartMin', 'ruinTrailStartMax', 'ruinStepMin', 'ruinStepMax', 'ruinWander', 'ruinLandSearch']],
     ['Special features', ['tileFeatureAmount', 'allFeatureAmount', 'hiddenFeatureChance', 'hiddenFeatureAmount']],
     ['Projects', ['projectBase', 'projectGrowth', 'legacyPerDistance', 'tradeBonus', 'marketTownWeight','gloriousBonus', 'gloriousRadius','bountyOptions']],
     ['Ancient sites', ['siteOptionCount', 'siteBundleMin', 'siteBundleVariance',
       'siteExploreRadius', 'siteFeatureCount', 'siteFeatureRadius', 'cleanseRadius']],
     ['Blight', ['blightStart', 'blightEvery', 'blightSpawnRange', 'blightSpread']],
-    ['Victory', ['winSettlements', 'winSites', 'winUpgrades']],
+    ['Victory', ['winSettlements', 'winSites', 'winUpgrades', 'winAwakened']],
   ];
   const WORLD_KEYS = new Set(OPTION_GROUPS.find(([t]) => t.startsWith('World generation'))[1]);
   const optLabel = k => cap(k.replace(/([A-Z])/g, ' $1').toLowerCase());
@@ -279,7 +293,7 @@
 
   function showOver() {
     const o = g.over;
-    const how = { settlements: 'built enough settlements', sites: 'found enough ancient sites', temple: 'awakened the gods at the Ancient Temple', economy: 'upgraded enough settlements for an economic victory' };
+    const how = { settlements: 'built enough settlements', sites: 'found enough ancient sites', temple: 'awakened the gods at the Ancient Temple', economy: 'upgraded enough settlements for an economic victory', awakened: 'awakened enough ancient sites' };
     openModal(`<div class="sheet"><h3>${o.won ? 'You win' : 'The blight took your last settlement'}</h3>
       <div>${o.won ? `On turn ${o.turn} you ${how[o.how]}.` : `You lasted until turn ${o.turn}.`}</div>
       <div class="btns"><button class="primary" data-act="restart">New world</button></div></div>`, 'over');
@@ -323,7 +337,7 @@
     else if (a === 'restart') newGame(randomSeed());
     else if (a === 'newgame') { if (g.over || confirm('Abandon this world and start a new game?')) newGame(randomSeed()); }
     else if (b.dataset.pick) { if (g.chooseProject(b.dataset.pick).ok) { CV.audio.play('project'); closeModal(); refresh(); } }
-    else if (b.dataset.site) { if (g.activateSite(+b.dataset.site, b.dataset.opt).ok) { closeModal(); refresh(); } }
+    else if (b.dataset.site) { if (g.activateSite(+b.dataset.site, b.dataset.opt).ok) { CV.audio.play('siteActivate'); closeModal(); refresh(); } }
   });
 
   // Volume applies immediately and is stored on its own, independent of Save/Cancel.
@@ -419,23 +433,42 @@
     const r = canvas.getBoundingClientRect();
     W = r.width; H = r.height;
     canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+    glyphCache.clear(); // cached glyphs are rasterised at the old pixel ratio
     dirty = true;
   }
   window.addEventListener('resize', resize);
 
+  // Emoji fillText is slow and runs for most tiles every frame, so each glyph is rendered once
+  // per size into a small offscreen canvas and blitted from then on.
+  const glyphCache = new Map();
   function glyph(ch, cx, cy, size, color) {
-    ctx.font = `${size}px "Segoe UI Emoji","Apple Color Emoji",sans-serif`;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    if (color) ctx.fillStyle = color;
-    ctx.fillText(ch, cx, cy);
+    size = Math.max(1, Math.round(size));
+    const key = `${ch}|${size}|${color || ''}`;
+    let c = glyphCache.get(key);
+    if (!c) {
+      if (glyphCache.size > 3000) glyphCache.clear();
+      const box = Math.ceil(size * 1.6); // room for emoji that overhang their em box
+      c = document.createElement('canvas'); c.width = c.height = Math.ceil(box * dpr); c.box = box;
+      const o = c.getContext('2d'); o.scale(dpr, dpr);
+      o.font = `${size}px "Segoe UI Emoji","Apple Color Emoji",sans-serif`;
+      o.textAlign = 'center'; o.textBaseline = 'middle'; o.fillStyle = color || '#fff';
+      o.fillText(ch, box / 2, box / 2);
+      glyphCache.set(key, c);
+    }
+    ctx.drawImage(c, cx - c.box / 2, cy - c.box / 2, c.box, c.box);
   }
-  function village(cx, cy, z) { // cluster of medieval cottages; back row first
+  function village(cx, cy, z, razed) { // cluster of medieval cottages; back row first. Razed: charred, roofs caved in
     const hut = (x, base, w, h, wall, roof) => {
+      if (razed) { wall = '#5a4c40'; roof = '#231d1a'; }
       ctx.fillStyle = wall; ctx.fillRect(x - w / 2, base - h, w, h);
       ctx.beginPath();
-      ctx.moveTo(x - w / 2 - 2 * z, base - h); ctx.lineTo(x, base - h - w * 0.75); ctx.lineTo(x + w / 2 + 2 * z, base - h);
+      if (razed) { // half a roof, slumped onto the walls
+        ctx.moveTo(x - w / 2 - 2 * z, base - h); ctx.lineTo(x - w * 0.1, base - h - w * 0.45); ctx.lineTo(x + w * 0.15, base - h);
+      } else {
+        ctx.moveTo(x - w / 2 - 2 * z, base - h); ctx.lineTo(x, base - h - w * 0.75); ctx.lineTo(x + w / 2 + 2 * z, base - h);
+      }
       ctx.closePath(); ctx.fillStyle = roof; ctx.fill();
-      ctx.fillStyle = '#3b2a1a'; ctx.fillRect(x - 1.5 * z, base - h * 0.55, 3 * z, h * 0.55); // door
+      ctx.fillStyle = razed ? '#120e0c' : '#3b2a1a'; ctx.fillRect(x - 1.5 * z, base - h * 0.55, 3 * z, h * 0.55); // door
     };
     hut(cx - 8 * z, cy - 1 * z, 9 * z, 6 * z, '#d9c7a0', '#a8472f');
     hut(cx + 8 * z, cy - 1 * z, 9 * z, 6 * z, '#cdb88f', '#8f3b28');
@@ -443,27 +476,20 @@
     hut(cx - 10 * z, cy + 11 * z, 8 * z, 5 * z, '#cdb88f', '#6e4a2c');
     hut(cx + 10 * z, cy + 11 * z, 8 * z, 5 * z, '#d9c7a0', '#6e4a2c');
   }
+  function ruins(cx, cy, z) { // assets/ruins.svg, drawn once loaded; it is laid out on a 44x44 tile
+    if (RUINS_IMG.complete && RUINS_IMG.naturalWidth) ctx.drawImage(RUINS_IMG, cx - 22 * z, cy - 22 * z, 44 * z, 44 * z);
+  }
   function featureIcon(f, cx, cy, dim, z, x, y) {
     ctx.globalAlpha = dim ? 0.5 : 1;
     if (f.kind === 'ruins') {
-      glyph('\u{1F3DA}️', cx, cy, 22 * z);
-      if (g.taken.ruinlore) { // Ruin Lore: an arrow toward the Ancient Temple
+      ruins(cx, cy, z);
+      if (g.taken.ruinlore) { // Ruin Lore: an arrow toward the next ruins (or the Ancient Temple)
         const [ax, ay] = { north: [0, -1], south: [0, 1], east: [1, 0], west: [-1, 0] }[g.ruinDirection(x, y)];
         glyph(ARROW[g.ruinDirection(x, y)], cx + ax * 14 * z, cy + ay * 14 * z, 13 * z);
       }
     } else if (Array.isArray(f.res)) glyph('✨', cx, cy, 24 * z);
     else glyph(ICON[f.res], cx, cy, 24 * z);
     ctx.globalAlpha = 1;
-  }
-
-  // Rot Forecast: cached because drawTile runs for every visible tile
-  const NO_RISK = new Set();
-  let riskCache = null, riskKey = '';
-  function risk() {
-    if (!g.taken.forecast) return NO_RISK;
-    const key = `${g.turn}|${g.blight.size}|${g.known.size}`;
-    if (key !== riskKey) { riskKey = key; riskCache = g.atRisk(); }
-    return riskCache;
   }
 
   function drawTile(x, y, sx, sy) {
@@ -483,7 +509,8 @@
         ctx.stroke();
       }
       const f = g.feature(x, y);
-      if (!f && !t.site && !t.temple && !bl && !g.settlements.some(c => c.x === x && c.y === y)) { // plain tile: faint terrain hint
+      const settlement = settleAt.get(k), ruin = fallenAt.get(k);
+      if (!f && !t.site && !t.temple && !bl && !settlement && !ruin) { // plain tile: faint terrain hint
         ctx.globalAlpha = 0.22; glyph(TYPE_ICON[t.type], cx, cy, 20 * z); ctx.globalAlpha = 1;
       }
       if (f) featureIcon(f, cx, cy + (t.site ? 9 : 0) * z, !!bl, z, x, y);
@@ -491,15 +518,11 @@
       if (bl) {
         ctx.fillStyle = 'rgba(82,24,105,.82)'; ctx.fillRect(sx, sy, TS, TS);
         if (bl.pustule && g.taken.discernment) glyph('☣️', cx, cy, 30 * z);
-      } else if (risk().has(k)) {
-        ctx.fillStyle = 'rgba(150,60,190,.3)'; ctx.fillRect(sx, sy, TS, TS);
-        ctx.strokeStyle = 'rgba(190,100,230,.8)'; ctx.lineWidth = 2; ctx.setLineDash([5, 4]);
-        ctx.strokeRect(sx + 3, sy + 3, TS - 6, TS - 6); ctx.setLineDash([]);
       }
-      const settlement = g.settlements.find(c => c.x === x && c.y === y);
-      if (settlement) { village(cx, cy - 1 * z, z); }
-      // upgrade badge in the tile corner; fallen scavenger settlements keep theirs, dimmed
-      const badged = settlement || g.fallen.find(c => c.x === x && c.y === y);
+      if (settlement) village(cx, cy - 1 * z, z);
+      else if (ruin) village(cx, cy - 1 * z, z, true);
+      // upgrade badge in the tile corner; destroyed settlements keep theirs, dimmed
+      const badged = settlement || ruin;
       const upIcon = badged && badged.upgrade && (CV.UPGRADES.find(u => u.id === badged.upgrade) || {}).icon;
       if (upIcon) {
         if (!settlement) ctx.globalAlpha = 0.6;
@@ -540,7 +563,11 @@
     }
   }
 
+  // settlements by tile key, rebuilt each draw so drawTile need not scan the lists per tile
+  let settleAt = new Map(), fallenAt = new Map();
   function draw() {
+    settleAt = new Map(g.settlements.map(c => [K(c.x, c.y), c]));
+    fallenAt = new Map(g.fallen.map(c => [K(c.x, c.y), c]));
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.fillStyle = '#0b0e12'; ctx.fillRect(0, 0, W, H);
     const cols = Math.ceil(W / TS / 2) + 2, rows = Math.ceil(H / TS / 2) + 2;
@@ -567,8 +594,9 @@
       if (Math.abs(dx) > 0.01 || Math.abs(dy) > 0.01) { cam.x += dx * 0.35; cam.y += dy * 0.35; dirty = true; }
       else if (dx || dy) { cam.x = target.x; cam.y = target.y; dirty = true; }
     }
+    // the panel waits for the drag to end; rebuilding it on every tile crossed stalls the drag
     const c = centre(), key = c.x + ',' + c.y;
-    if (key !== infoKey) { infoKey = key; renderInfo(); }
+    if (key !== infoKey && !(drag && drag.moved)) { infoKey = key; renderInfo(); }
     if (dirty) { dirty = false; draw(); }
     requestAnimationFrame(frame);
   }

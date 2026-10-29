@@ -29,6 +29,7 @@
       this.cache = new Map();
       this.makeBlob();
       this.makeTemple();
+      this.makeRuinTrail();
     }
     // Ancient Temple: a 3x3 block whose centre lies templeMinDistance..templeMaxDistance (Chebyshev) from the start.
     // The centre is kept one tile inside that band so every temple tile is within it.
@@ -41,6 +42,34 @@
       this.temple = { x, y };
     }
     isTemple(x, y) { return CV.cheb(x, y, this.temple.x, this.temple.y) <= 1; }
+    // Ruins: a wandering trail from near the start to the temple. The first ruin lies ruinTrailStartMin..Max from the
+    // start in any direction; each next one is ruinStepMin..Max further on, heading for the temple give or take
+    // ruinWander radians. Points in the sea move to the nearest land within ruinLandSearch, or are skipped.
+    // ruinNext maps each ruin to the tile it points at: the next ruin, or the temple for the last one.
+    makeRuinTrail() {
+      const rng = CV.mulberry32(this.seed * 389 + 11), t = this.temple;
+      const trail = [], used = new Set();
+      const place = (px, py) => {
+        for (let r = 0; r <= CFG.ruinLandSearch; r++) for (let dx = -r; dx <= r; dx++) for (let dy = -r; dy <= r; dy++) {
+          if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+          const x = px + dx, y = py + dy, k = K(x, y);
+          if (used.has(k) || CV.cheb(x, y, 0, 0) < CFG.startSafeRadius || CV.cheb(x, y, t.x, t.y) <= 1) continue;
+          if (this.terrain(x, y, k) === 'ocean') continue;
+          used.add(k); trail.push({ x, y });
+          return [x, y];
+        }
+        return [px, py];
+      };
+      const a0 = rng() * 2 * Math.PI, d0 = CFG.ruinTrailStartMin + rng() * (CFG.ruinTrailStartMax - CFG.ruinTrailStartMin);
+      let [x, y] = place(Math.round(Math.cos(a0) * d0), Math.round(Math.sin(a0) * d0));
+      for (let guard = 0; CV.cheb(x, y, t.x, t.y) > CFG.ruinStepMax && guard < 10000; guard++) {
+        const a = Math.atan2(t.y - y, t.x - x) + (rng() * 2 - 1) * CFG.ruinWander;
+        const len = CFG.ruinStepMin + rng() * (CFG.ruinStepMax - CFG.ruinStepMin);
+        [x, y] = place(x + Math.round(Math.cos(a) * len), y + Math.round(Math.sin(a) * len));
+      }
+      this.ruinTrail = trail;
+      this.ruinNext = new Map(trail.map((p, i) => [K(p.x, p.y), trail[i + 1] || t]));
+    }
     rnd(x, y, salt) { return hash3(x, y, salt * 7919 + this.seed * 131); }
     noise(x, y, scale, salt) {
       const gx = Math.floor(x / scale), gy = Math.floor(y / scale);
@@ -84,19 +113,22 @@
       const m = this.noise(x, y, 7, 4);
       return m < CFG.mountainBelow ? 'mountains' : m < CFG.forestBelow ? 'forest' : 'plains';
     }
+    // base terrain type, without temple, features or sites
+    terrain(x, y, k) {
+      if (this.blob.has(k)) return this.landType(x, y);
+      const e = 0.6 * this.noise(x, y, 16, 1) + 0.4 * this.noise(x, y, 6, 2);
+      let land = e >= CFG.landThreshold;
+      if (!land && this.ring.has(k) && this.rnd(x, y, 3) < CFG.ringLandChance) land = true;
+      if (!land) return 'ocean';
+      if (this.noise(x, y, 20, 5) > CFG.desertThreshold && !this.ring.has(k)) return 'desert';
+      return this.landType(x, y);
+    }
     gen(x, y, k) {
       // temple tiles are plain land with nothing else on them
       if (this.isTemple(x, y)) return { x, y, type: 'plains', feature: null, hidden: null, site: false, temple: true };
-      let type;
-      if (this.blob.has(k)) type = this.landType(x, y);
-      else {
-        const e = 0.6 * this.noise(x, y, 16, 1) + 0.4 * this.noise(x, y, 6, 2);
-        let land = e >= CFG.landThreshold;
-        if (!land && this.ring.has(k) && this.rnd(x, y, 3) < CFG.ringLandChance) land = true;
-        if (!land) type = 'ocean';
-        else if (this.noise(x, y, 20, 5) > CFG.desertThreshold && !this.ring.has(k)) type = 'desert';
-        else type = this.landType(x, y);
-      }
+      const type = this.terrain(x, y, k);
+      // trail ruins replace whatever else the tile would have held
+      if (this.ruinNext.has(k)) return { x, y, type, feature: CV.makeRuins(), hidden: null, site: false };
       let feature = null, hidden = null, site = false;
       if (CV.cheb(x, y, 0, 0) >= CFG.startSafeRadius) {
         if (type !== 'ocean' && CV.cheb(x, y, 0, 0) >= CFG.siteMinDistance && this.rnd(x, y, 12) < CFG.siteChance) site = true;
@@ -105,8 +137,6 @@
         else if (CV.FEATURES.some(f => f.hidden && f.on.includes(type)) && this.rnd(x, y, 14) < CFG.hiddenFeatureChance) {
           hidden = CV.makeFeature(this.rnd(x, y, 15), type, 1, true);
         }
-        // ruins use their own roll too, on land tiles left empty by everything above
-        else if (type !== 'ocean' && this.rnd(x, y, 16) < CFG.ruinsChance) feature = CV.makeRuins();
       }
       return { x, y, type, feature, hidden, site };
     }

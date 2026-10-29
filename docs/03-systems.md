@@ -35,14 +35,14 @@ The full list (which base tiles each feature can appear on, its name and its bon
 ## 4. Settlements
 - **Cost:** Food. **Instant**.
 - **Footprint:** 5×5 square minus the four corners = **21 tiles**.
-- **Claiming:** a tile can belong to **one settlement only**, permanently, unless the settlement is lost. When the settlement is lost, the tiles become free.
+- **Claiming:** a tile can belong to **one settlement only**, permanently, even after the settlement is destroyed by blight.
 - **Placement rules:** not on claimed tiles, not on pustules or blight, not on water (until a project allows it).
 - **Production:** each turn, each settlement yields the sum of its claimed tiles.
-- **Loss:** if the settlement's own tile turns to blight, the settlement is lost.
+- **Destruction:** if the settlement's own tile turns to blight, the settlement is destroyed. It keeps its claimed tiles (no new settlement can take them) and is shown as a charred village, but it produces nothing, gives no trade bonus, and no longer counts as a settlement. Only a Scavenger with *Dwell in the Rot* keeps yielding, from its blighted tiles.
 - A **free settlement** can come from an ancient site.
 - **Exploration**: Claimed tiles are automatically and instantly explored
 - **Upgrade:** each settlement can be upgraded **once**, for **Wealth** (`upgradeCost`). The upgrades on offer are the ones unlocked by projects taken so far (see `06-projects.md`). Upgrades:
-  - **Survey Post** (unlocked by *Cartography*): every exploration reveals 1 extra tile per settlement with this upgrade.
+  - **Survey Post** (unlocked by *Cartography*): every exploration reveals 1 extra tile per settlement with this upgrade. With *Wayfinders* (child of *Cartography*), each Survey Post also reveals the 2 hidden tiles closest to it (`wayfinderTiles`, Euclidean, ties broken by the map seed) at the end of every turn.
   - **Shrine Keeper** (unlocked by *Pilgrimage*): every ancient site within 10 tiles (`shrineKeeperRadius`) of this settlement can be activated one additional time. Shrine Keepers stack: a site in range of two gets two extra activations.
   - **Desert Bloom** (unlocked by *Irrigation*): every desert tile claimed by the settlement yields 1 food, 1 material and 1 wealth (instead of nothing). Special features on the tile still add their bonus; blighted tiles still follow the blight rules.
   - **Artisan Quarter** (unlocked by *Craftsmanship*): the bonuses of special tiles (tile features) claimed by the settlement are doubled. Blighted tiles still have their features disabled. With *Relic Restoration*, it also gets 2 materials per turn from each claimed ancient site and 2 wealth per turn from each claimed ruins tile (not while blighted).
@@ -65,9 +65,9 @@ Spent with Materials: each time the threshold is reached, the player picks any u
 
 ## 7. Blight (the threat)
 - **Turn 10**, then **every 10 turns**: one **undiscovered tile** (a random hidden tile within 15 tiles of known land) becomes a **pustule**.
-- **Every turn, per pustule:** one regular tile that is adjacent to the pustule, or connected to it through blighted tiles, becomes **blight**.
+- **Every turn, per pustule:** one regular tile that is adjacent to the pustule, or connected to it through blighted tiles, becomes **blight** (only horizontally and vertically; diagonals don't count).
 - **Blighted tile:** produces **nothing**, and any special feature is **disabled**.
-- If a **settlement's tile** is blighted, the **settlement is lost**.
+- If a **settlement's tile** is blighted, the **settlement is destroyed** (see Settlements).
 - **No settlements** on pustules or blight.
 - **Pustules look the same as blight** until a project lets the player tell them apart.
 - **Cleansing:** only ancient-site benefits clear blight (30 tile radius).
@@ -83,7 +83,8 @@ Why it works:
 - Have **X settlements**
 - Find **Y ancient sites**
 - **Awaken the gods** at the Ancient Temple (see below)
-- **Economic victory**: with *Economic Dominion* (child of *Merchant Guilds*) taken, have **20** upgraded settlements (`winUpgrades`). Only settlements still standing count (not ones lost to blight, even with *Dwell in the Rot*); upgrades bought before the project count. Checked on End turn like the other counted goals.
+- **Economic victory**: with *Economic Dominion* (child of *Merchant Guilds*) taken, have **20** upgraded settlements (`winUpgrades`). Only settlements still standing count (not ones destroyed by blight, even with *Dwell in the Rot*); upgrades bought before the project count. Checked on End turn like the other counted goals.
+- **Awakened sites**: with *Ancient Rites* (child of *Legacy of Distance*) taken, every ancient site activation offers **Awaken** besides its usual benefits. Awakening gives nothing else, but after **20** awakenings (`winAwakened`) you win. Each activation counts, so a site with extra activations from Shrine Keepers can be awakened more than once. Checked on End turn.
 
 **Lose** when **all your settlements** are turned to blight.
 
@@ -92,6 +93,6 @@ X and Y are configurable per game (difficulty setting).
 ### Ancient Temple (exploration victory)
 - At world creation one **3×3 Ancient Temple** is placed so that every tile of it is **600–800 tiles** (Chebyshev, `templeMinDistance`..`templeMaxDistance`) from the start. Its tiles are plain land with no feature or site.
 - Exploring (revealing) **any** temple tile instantly reveals all nine.
-- **Ruins** (a special feature, see `05-special-tiles.md`) are scattered over land. On their own they do nothing.
-- *Ruin Lore* (child of *Cartography*) makes every Ruins tile show the **cardinal direction** (north, south, east or west) toward the temple: along whichever axis the temple is further away on.
+- **Ruins** (a special feature, see `05-special-tiles.md`) form a single **messy trail** from near the start to the temple. The first ruin lies 6–12 tiles from the start in any direction (`ruinTrailStartMin`..`ruinTrailStartMax`); each next one is 15–30 tiles further (`ruinStepMin`..`ruinStepMax`), heading for the temple but turning up to `ruinWander` radians either way. A point that falls in the sea moves to the nearest land within `ruinLandSearch` tiles, or is skipped. On their own ruins do nothing.
+- *Ruin Lore* (child of *Cartography*) makes every Ruins tile show the **cardinal direction** (north, south, east or west) toward the **next ruin** of the trail, and the last ruin toward the temple: along whichever axis the target is further away on.
 - *Awakening* (child of *Ruin Lore*) lets the player activate a found temple (centre the view on any temple tile) to **awaken the gods and win immediately**. Unlike the counted goals, this is not deferred to End turn.

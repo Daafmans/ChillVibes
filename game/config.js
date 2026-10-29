@@ -18,10 +18,11 @@
     // --- Exploring ---
     openFrontierRadius: 5,                        // Open Frontier: explore this far (Chebyshev) from a settlement
     desertSurveyMax: 1000,                        // Desert Survey: most desert tiles one exploration can reveal
+    wayfinderTiles: 2,                            // Wayfinders: hidden tiles each Survey Post reveals per turn (closest first)
+    wayfinderMaxRadius: 30,                       // Wayfinders: furthest (Chebyshev) a Survey Post looks for hidden tiles
 
     // --- Fog glimpses (Surveyor's Eye, Omen Reading, Ancient Sight, Blight Sight) ---
     glimpseBase: 1, glimpseStep: 1, glimpseMax: 15, // range = base + step * (copies - 1), capped at max
-    blightSightRange: 1,
 
     // --- World generation ---
     blobMin: 50, blobVariance: 31,                // starting landmass has blobMin .. blobMin+blobVariance-1 tiles
@@ -33,7 +34,10 @@
     desertThreshold: 0.70,                        // desert-noise level above which land becomes desert
     mountainBelow: 0.32, forestBelow: 0.66,       // land noise bands: mountains < forest < plains
     templeMinDistance: 600, templeMaxDistance: 800, // every Ancient Temple tile lies this far (Chebyshev) from the start
-    ruinsChance: 0.01,                            // per-tile chance of Ruins on a land tile with no other feature or site
+    ruinTrailStartMin: 6, ruinTrailStartMax: 12,  // the first ruin of the trail lies this far (straight line) from the start
+    ruinStepMin: 15, ruinStepMax: 30,             // distance from each ruin to the next
+    ruinWander: 1.0,                              // radians each step may turn away from the temple's direction
+    ruinLandSearch: 6,                            // a trail point in the sea moves to land within this range, or is skipped
 
     // --- Special features ---
     tileFeatureAmount: 2,                         // bonus resource per turn on a claimed single-resource feature
@@ -64,12 +68,13 @@
     // --- Victory ---
     winSettlements: 20, winSites: 20,
     winUpgrades: 20,                              // Economic Dominion: upgraded settlements (still standing) needed to win
+    winAwakened: 20,                              // Ancient Rites: ancient site awakenings needed to win
   };
   CV.CFG_DEFAULTS = Object.freeze(Object.assign({}, CV.CFG));
   CV.RES = ['food', 'materials', 'wealth'];
   // Special features (docs/05-special-tiles.md). kind: tile (bonus on the tile; res is one resource or an array of them).
   // hidden: generated separately and only exists in play once the named project is taken.
-  // kind ruins: generated separately, no bonus; with Ruin Lore it points toward the Ancient Temple.
+  // kind ruins: generated as a trail to the Ancient Temple, no bonus; with Ruin Lore each points to the next.
   CV.FEATURES = [
     { id: 'fertileValley', name: 'Fertile Valley', on: ['plains'], kind: 'tile', res: 'food' },
     { id: 'crossroads', name: 'Crossroads', on: ['plains', 'desert'], kind: 'tile', res: 'wealth' },
