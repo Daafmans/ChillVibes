@@ -59,6 +59,17 @@
     out.push('top: ' + document.getElementById('top').innerText.replace(/\n/g, ' '));
     out.push('info: ' + document.getElementById('info').innerText.replace(/\n/g, ' | '));
     out.push('toast: ' + document.getElementById('toast').innerText.replace(/\n/g, ' | '));
+    // ruins and the Ancient Temple: reveal a ruin and the temple, take the projects, awaken the gods
+    g.taken.ruinlore = 1;
+    let ruin = null;
+    for (let x = -60; !ruin && x < 60; x++) for (let y = -60; !ruin && y < 60; y++) { const f = g.world.tile(x, y).feature; if (f && f.kind === 'ruins') ruin = [x, y]; }
+    g.reveal(...ruin); CV.ui.goto(...ruin);
+    out.push('ruin info: ' + document.getElementById('info').innerText.replace(/\n/g, ' | '));
+    const tp = g.world.temple;
+    g.reveal(tp.x + 1, tp.y + 1); CV.ui.goto(tp.x, tp.y);
+    out.push('temple before: ' + document.getElementById('info').innerText.replace(/\n/g, ' | '));
+    g.taken.awakening = 1; CV.ui.goto(tp.x, tp.y); click('[data-act=awaken]');
+    out.push('temple after: over ' + JSON.stringify(g.over) + ' modal: ' + document.getElementById('modal').innerText.replace(/\n/g, ' | '));
   } catch (e) { out.push('EXC ' + e.stack); }
   document.getElementById('res').textContent = 'UIDONE\n' + out.join('\n');
 })();

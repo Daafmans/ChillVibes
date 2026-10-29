@@ -5,7 +5,7 @@
   const ICON = { food: '\u{1F33E}', materials: '⛏️', wealth: '\u{1FA99}' };
   const TYPE_ICON = { plains: '\u{1F33F}', forest: '\u{1F332}', mountains: '⛰️', desert: '\u{1F335}', ocean: '\u{1F30A}' };
   const TYPE_COLOR ={ plains: '#a9c46c', forest: '#4f8a4b', mountains: '#8a8f99', desert: '#d9c48a', ocean: '#3f78b5' };
-  const RELIC_COLOR = { blue: '#4aa3ff', green: '#5be37d', black: '#15151a' };
+  const TEMPLE_COLOR = '#c8b27e';
   const SETTLEMENT_COLORS = ['#ffd166', '#ef8354', '#9d8df1', '#4fd0d0', '#f28fad', '#b8e986', '#f6e27a', '#6ea8ff'];
   const el = id => document.getElementById(id);
   const canvas = el('map'), ctx = canvas.getContext('2d');
@@ -33,14 +33,16 @@
   const fmt = y => RES.filter(r => y[r]).map(r => `${ICON[r]}${y[r]}`).join(' ') || '—';
   const cap = s => s[0].toUpperCase() + s.slice(1);
   const centre = () => ({ x: Math.round(cam.x), y: Math.round(cam.y) });
-  const dot = c => `<svg class="grail" viewBox="0 0 20 20"><path d="M3 2H17C17 9 13 11 11.2 11.4V15.5L15 18H5L8.8 15.5V11.4C7 11 3 9 3 2Z" fill="${RELIC_COLOR[c] || c}" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/></svg>`;
 
-  function featureText(f) {
+  const ARROW = { north: '⬆', south: '⬇', east: '➡', west: '⬅' };
+  function featureText(f, x, y) {
     if (!f) return '';
-    if (f.kind === 'tile') return `${f.name}. Tile bonus: +${f.amount} ${[].concat(f.res).map(r => ICON[r]).join('')}`;
-    return `${dot(f.color)}${f.name}. Relic (${f.color})`;
+    if (f.kind === 'ruins') {
+      return g.taken.ruinlore ? `\u{1F3DA}️ Ruins. Their carvings point ${g.ruinDirection(x, y)}, toward the Ancient Temple.`
+        : '\u{1F3DA}️ Ruins. Their carvings mean nothing to you yet.';
+    }
+    return `${f.name}. Tile bonus: +${f.amount} ${[].concat(f.res).map(r => ICON[r]).join('')}`;
   }
-  function reqText(req) { return req ? `${dot(req.color)}${req.n} ${req.color} relic${req.n > 1 ? 's' : ''}` : ''; }
 
   // ---------- top bar & panels ----------
   function renderTop() {
@@ -55,7 +57,8 @@
       `<button data-act="newgame" title="Abandon this world and start a new one">New game</button>` +
       `<span class="pill dim">Settlements <b>${p.settlements}/${CFG.winSettlements}</b></span>` +
       `<span class="pill dim">Sites <b>${p.sites}/${CFG.winSites}</b></span>` +
-      `<span class="pill dim">Ascension <b>${p.ascensions}/${CFG.winAscensions}</b></span>` +
+      (g.taken.dominion ? `<span class="pill dim">Upgraded <b>${p.upgrades}/${CFG.winUpgrades}</b></span>` : '') +
+      `<span class="pill dim">\u{1F3DB}️ Temple <b>${g.templeFound() ? 'found' : 'not found'}</b></span>` +
       `<span class="pill ${g.turn >= CFG.blightStart ? 'warn' : 'dim'}">☣ ${g.turn >= CFG.blightStart ? `next pustule: turn ${next}` : `blight begins turn ${CFG.blightStart}`}</span>`;
   }
 
@@ -64,7 +67,7 @@
     const gl = known ? null : g.glimpse(x, y);
     const rows = [];
     let title;
-    if (known) title = cap(t.type);
+    if (known) title = t.temple ? 'Ancient Temple' : cap(t.type);
     else if (gl && gl.type) title = `${cap(t.type)} (glimpsed)`;
     else title = 'Unexplored';
     const cid = g.claimed.get(k);
@@ -84,10 +87,12 @@
       if (cid) rows.push(`Claimed by settlement #${cid}`);
       rows.push(`Yield: ${fmt(g.tileYield(x, y))}${bl ? ' (blighted)' : ''}`);
       const f = g.feature(x, y);
-      if (f) rows.push(featureText(f) + (bl ? ' <span class="warn">(disabled)</span>' : ''));
+      if (f) rows.push(featureText(f, x, y) + (bl ? ' <span class="warn">(disabled)</span>' : ''));
+      if (t.temple) rows.push(g.taken.awakening ? '\u{1F3DB}️ The Ancient Temple — <span class="ok">the gods can be awakened</span>'
+        : '\u{1F3DB}️ The Ancient Temple. The Awakening project lets you rouse the gods here.');
       if (t.site) rows.push(g.siteUsed(k) ? '\u{1F5FF} Ancient site (used)' : '\u{1F5FF} Ancient site — <span class="ok">ready to activate</span>');
     } else if (gl) {
-      if (gl.feature && t.feature) rows.push('✨ Something special here');
+      if (gl.feature && g.worldFeature(x, y)) rows.push('✨ Something special here');
       if (gl.site && t.site) rows.push('\u{1F5FF} An ancient site');
     }
     return { title, rows, known };
@@ -103,6 +108,10 @@
     // disabled buttons swallow mouse events in some browsers, so the tooltip sits on a wrapper
     btns += `<span title="${fd.ok ? '' : fd.reason}"><button data-act="found" ${fd.ok ? '' : 'disabled'}>Found settlement (F) · ${ICON.food}${fd.cost}</button></span>`;
     if (siteReady) btns += `<button class="primary" data-act="site">Activate site (A)</button>`;
+    if (g.world.tile(x, y).temple && g.known.has(k)) {
+      const aw = g.canAwaken(x, y);
+      btns += `<span title="${aw.ok ? 'Wins the game' : aw.reason}"><button class="primary" data-act="awaken" ${aw.ok ? '' : 'disabled'}>\u{1F3DB}️ Awaken the gods (A)</button></span>`;
+    }
     const here = g.settlements.find(c => c.x === x && c.y === y);
     if (here && !here.upgrade) {
       const offer = g.upgradeOffer();
@@ -119,12 +128,11 @@
   }
 
   function renderProjects() {
-    const have = Object.keys(g.taken).map(id => ({ p: PROJECTS.find(q => q.id === id), n: g.taken[id] }));
+    const have = Object.keys(g.taken).map(id => ({ p: PROJECTS.find(q => q.id === id), n: g.taken[id] })).filter(o => o.p);
     const avail = g.projectAvailable();
     let h = `<h3>Projects <span class="dim">${g.projectCount}</span></h3>`;
     h += `<div class="row dim">Next project at ${ICON.materials}${g.threshold} (you have ${g.res.materials})</div>`;
     h += `<div class="btns" style="margin:6px 0 8px"><button data-act="projects" class="${avail ? 'primary pulse' : ''}" ${avail ? '' : 'disabled'}>Choose a project</button></div>`;
-    h += RES.length ? `<div class="row dim">Relics in your settlements: ${CV.COLORS.map(c => `${dot(c)}${g.relicCount(c)}`).join('  ')}</div>` : '';
     h += have.length ? have.map(({ p, n }) => `<span class="chip" data-tip="${p.desc.replace(/"/g, '&quot;')}">${p.name}${n > 1 ? ' ×' + n : ''}</span>`).join('') : '<div class="row dim">No projects yet.</div>';
     el('projects').innerHTML = h;
   }
@@ -153,24 +161,27 @@
     const kids = id => PROJECTS.filter(p => p.parent === id);
     const esc = s => s.replace(/"/g, '&quot;');
     const node = p => {
-      const n = g.taken[p.id] || 0, isOffered = offered.has(p.id), ok = g.relicsOk(p.relic);
-      const state = isOffered ? (ok ? 'open' : 'short') : n ? 'done' : 'locked';
-      const tip = `${p.desc}${p.multi ? ' (repeatable)' : ''}${p.relic ? ` Requires ${p.relic.n} ${p.relic.color} relic${p.relic.n > 1 ? 's' : ''}.` : ''}`;
+      const n = g.taken[p.id] || 0, isOffered = offered.has(p.id);
+      const state = isOffered ? 'open' : n ? 'done' : 'locked';
+      const up = CV.UPGRADES.find(u => u.project === p.id);
+      const kind = up ? 'k-upgrade' : p.multi ? 'k-multi' : 'k-once';
+      const tip = `${p.desc}${p.multi ? ' (repeatable)' : ''}`;
+      const sub = up ? `${up.icon} settlement upgrade` : p.multi ? '↻ repeatable' : '';
       const body = `<div class="t">${p.name}${n ? `<span class="dim"> ${n > 1 ? '×' + n : '✓'}</span>` : ''}</div>` +
-        `${p.multi ? '<div class="sub dim">repeatable</div>' : ''}` +
-        (p.relic ? `<div class="sub ${ok ? 'ok' : 'warn'}">${reqText(p.relic)}</div>` : '');
-      const cls = `pnode ${state}`;
-      const inner = isOffered && ok
+        `${sub ? `<div class="sub">${sub}</div>` : ''}`;
+      const cls = `pnode ${state} ${kind}`;
+      const inner = isOffered
         ? `<button class="${cls}" data-pick="${p.id}" data-tip="${esc(tip)}">${body}</button>`
         : `<div class="${cls}" data-tip="${esc(tip)}">${body}</div>`;
       const ch = kids(p.id);
       return `<div class="branch">${inner}${ch.length ? `<div class="kids">${ch.map(c => `<div class="kid">${node(c)}</div>`).join('')}</div>` : ''}</div>`;
     };
     const roots = PROJECTS.filter(p => !p.parent);
-    const cats = [...new Set(roots.map(p => p.cat))].sort((a, b) => (a === 'Victory') - (b === 'Victory'));
+    const cats = [...new Set(roots.map(p => p.cat))];
     const trees = cats.map(c => `<section class="ptree"><h4>${c}</h4>${roots.filter(p => p.cat === c).map(node).join('')}</section>`).join('');
     openModal(`<div class="sheet"><h3>Choose a project</h3>
       <div class="dim">Costs ${ICON.materials}${g.threshold}. Projects change the rules of the game. Hover a project for details.</div>
+      <div class="plegend"><span class="k-once">One-time</span><span class="k-multi">↻ Repeatable</span><span class="k-upgrade">Unlocks a settlement upgrade</span></div>
       <div class="ptrees">${trees}</div><div class="btns"><button data-act="close">Later</button></div></div>`, 'projects');
   }
 
@@ -181,15 +192,14 @@
       features: ['Awaken the land', 'Two special features appear on nearby tiles.'],
       settlement: ['Settle the site', 'A free settlement is founded on the site tile.'],
       cleanse: ['Cleanse', `Remove all blight, pustules included, within ${CFG.cleanseRadius} tiles.`],
-      bundle: ['Offerings', 'A bundle of resources.'],
+      bundle: ['Offerings', 'A store of one resource.'],
     };
     const cards = offer.options.map(o => {
       const bad = g.siteOptionStatus(key, o);
       const extra = o.id === 'bundle' ? ` ${fmt(o.bundle)}` : '';
       return `<button class="card" data-site="${key}" data-opt="${o.id}" ${bad ? 'disabled' : ''}>
         <div class="t">${label[o.id][0]}</div><div>${label[o.id][1]}${extra}</div>
-        ${o.req ? `<div class="need ${g.relicsOk(o.req) ? 'ok' : 'warn'}">Requires ${reqText(o.req)}</div>` : ''}
-        ${bad && !o.req ? `<div class="need warn">${bad}</div>` : ''}</button>`;
+        ${bad ? `<div class="need warn">${bad}</div>` : ''}</button>`;
     }).join('');
     openModal(`<div class="sheet"><h3>\u{1F5FF} Ancient site at ${offer.x},${offer.y}</h3>
       <div class="dim">Pick one benefit. A site can be activated once.</div>
@@ -204,17 +214,18 @@
   const OPTION_GROUPS = [
     ['Start', ['startFood', 'startMaterials', 'startWealth']],
     ['Settlements', ['settlementBaseCost', 'settlementCostGrowth', 'settlementClaimRadius']],
-    ['Upgrades', ['upgradeCost', 'surveyPostTiles', 'shrineKeeperRadius', 'boundaryStoneReach']],
+    ['Upgrades', ['upgradeCost', 'surveyPostTiles', 'shrineKeeperRadius', 'relicSiteMaterials', 'relicRuinsWealth']],
     ['Exploring', ['openFrontierRadius']],
     ['Fog glimpses', ['glimpseBase', 'glimpseStep', 'glimpseMax', 'blightSightRange']],
     ['World generation (new game)', ['blobMin', 'blobVariance', 'blobFillChance', 'startSafeRadius', 'siteMinDistance',
-      'siteChance', 'featureChance', 'relicShare', 'landThreshold', 'ringLandChance', 'desertThreshold', 'mountainBelow', 'forestBelow']],
-    ['Special features', ['tileFeatureAmount', 'allFeatureAmount']],
-    ['Projects', ['projectBase', 'projectGrowth', 'legacyPerDistance', 'tradeBonus', 'gloriousBonus', 'gloriousRadius', 'relicYield']],
+      'siteChance', 'featureChance','landThreshold', 'ringLandChance', 'desertThreshold', 'mountainBelow', 'forestBelow',
+      'templeMinDistance', 'templeMaxDistance', 'ruinsChance']],
+    ['Special features', ['tileFeatureAmount', 'allFeatureAmount', 'hiddenFeatureChance', 'hiddenFeatureAmount']],
+    ['Projects', ['projectBase', 'projectGrowth', 'legacyPerDistance', 'tradeBonus', 'marketTownWeight','gloriousBonus', 'gloriousRadius','bountyOptions']],
     ['Ancient sites', ['siteOptionCount', 'siteBundleMin', 'siteBundleVariance',
       'siteExploreRadius', 'siteFeatureCount', 'siteFeatureRadius', 'cleanseRadius']],
     ['Blight', ['blightStart', 'blightEvery', 'blightSpawnRange', 'blightSpread']],
-    ['Victory', ['winSettlements', 'winSites', 'winAscensions']],
+    ['Victory', ['winSettlements', 'winSites', 'winUpgrades']],
   ];
   const WORLD_KEYS = new Set(OPTION_GROUPS.find(([t]) => t.startsWith('World generation'))[1]);
   const optLabel = k => cap(k.replace(/([A-Z])/g, ' $1').toLowerCase());
@@ -268,7 +279,7 @@
 
   function showOver() {
     const o = g.over;
-    const how = { settlements: 'built enough settlements', sites: 'found enough ancient sites', ascension: 'ascended' };
+    const how = { settlements: 'built enough settlements', sites: 'found enough ancient sites', temple: 'awakened the gods at the Ancient Temple', economy: 'upgraded enough settlements for an economic victory' };
     openModal(`<div class="sheet"><h3>${o.won ? 'You win' : 'The blight took your last settlement'}</h3>
       <div>${o.won ? `On turn ${o.turn} you ${how[o.how]}.` : `You lasted until turn ${o.turn}.`}</div>
       <div class="btns"><button class="primary" data-act="restart">New world</button></div></div>`, 'over');
@@ -279,12 +290,16 @@
     const r = g.explore(c.x, c.y);
     if (r.ok) {
       // one sound per exploration, rarest discovery wins
-      CV.audio.play(r.found.site ? 'exploreSite' : r.found.feature ? 'exploreFeature' : 'explore');
+      CV.audio.play(r.found.temple || r.found.site ? 'exploreSite' : r.found.feature ? 'exploreFeature' : 'explore');
       g.endTurn(); infoKey = null; refresh();
     }
   }
   function doFound() { const c = centre(); if (g.found(c.x, c.y).ok) { CV.audio.play('settlement'); refresh(); } }
-  function doSite() { const k = K(centre().x, centre().y); if (g.sites.has(k) && !g.siteUsed(k)) openSite(k); }
+  function doSite() {
+    const c = centre(), k = K(c.x, c.y);
+    if (g.sites.has(k) && !g.siteUsed(k)) openSite(k);
+    else if (g.awaken(c.x, c.y).ok) { CV.audio.play('project'); refresh(); }
+  }
 
   document.addEventListener('click', e => {
     // A click on the backdrop dismisses the modal like its "later" button (the game-over modal stays).
@@ -297,7 +312,7 @@
     const a = b.dataset.act;
     if (a === 'explore') doExplore();
     else if (a === 'found') doFound();
-    else if (a === 'site') doSite();
+    else if (a === 'site' || a === 'awaken') doSite();
     else if (a === 'upgrade') { if (g.upgrade(+b.dataset.sid, b.dataset.upgrade).ok) { CV.audio.play('project'); refresh(); } }
     else if (a === 'defer') { if (g.deferSite(+b.dataset.key).ok) { closeModal(); refresh(); } }
     else if (a === 'options') openOptions();
@@ -414,22 +429,6 @@
     if (color) ctx.fillStyle = color;
     ctx.fillText(ch, cx, cy);
   }
-  function relicDot(color, cx, cy, r) {
-    const s = r * 1.5; // grail: bowl, stem, base
-    ctx.beginPath();
-    ctx.moveTo(cx - 0.8 * s, cy - 0.9 * s);
-    ctx.lineTo(cx + 0.8 * s, cy - 0.9 * s);
-    ctx.bezierCurveTo(cx + 0.8 * s, cy + 0.1 * s, cx + 0.3 * s, cy + 0.25 * s, cx + 0.12 * s, cy + 0.3 * s);
-    ctx.lineTo(cx + 0.12 * s, cy + 0.65 * s);
-    ctx.lineTo(cx + 0.55 * s, cy + 0.9 * s);
-    ctx.lineTo(cx - 0.55 * s, cy + 0.9 * s);
-    ctx.lineTo(cx - 0.12 * s, cy + 0.65 * s);
-    ctx.lineTo(cx - 0.12 * s, cy + 0.3 * s);
-    ctx.bezierCurveTo(cx - 0.3 * s, cy + 0.25 * s, cx - 0.8 * s, cy + 0.1 * s, cx - 0.8 * s, cy - 0.9 * s);
-    ctx.closePath();
-    ctx.fillStyle = RELIC_COLOR[color]; ctx.fill();
-    ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.strokeStyle = '#fff'; ctx.stroke();
-  }
   function village(cx, cy, z) { // cluster of medieval cottages; back row first
     const hut = (x, base, w, h, wall, roof) => {
       ctx.fillStyle = wall; ctx.fillRect(x - w / 2, base - h, w, h);
@@ -444,10 +443,15 @@
     hut(cx - 10 * z, cy + 11 * z, 8 * z, 5 * z, '#cdb88f', '#6e4a2c');
     hut(cx + 10 * z, cy + 11 * z, 8 * z, 5 * z, '#d9c7a0', '#6e4a2c');
   }
-  function featureIcon(f, cx, cy, dim, z) {
+  function featureIcon(f, cx, cy, dim, z, x, y) {
     ctx.globalAlpha = dim ? 0.5 : 1;
-    if (f.kind === 'relic') relicDot(f.color, cx, cy, 10 * z);
-    else if (Array.isArray(f.res)) glyph('✨', cx, cy, 24 * z);
+    if (f.kind === 'ruins') {
+      glyph('\u{1F3DA}️', cx, cy, 22 * z);
+      if (g.taken.ruinlore) { // Ruin Lore: an arrow toward the Ancient Temple
+        const [ax, ay] = { north: [0, -1], south: [0, 1], east: [1, 0], west: [-1, 0] }[g.ruinDirection(x, y)];
+        glyph(ARROW[g.ruinDirection(x, y)], cx + ax * 14 * z, cy + ay * 14 * z, 13 * z);
+      }
+    } else if (Array.isArray(f.res)) glyph('✨', cx, cy, 24 * z);
     else glyph(ICON[f.res], cx, cy, 24 * z);
     ctx.globalAlpha = 1;
   }
@@ -467,7 +471,7 @@
     const cx = sx + TS / 2, cy = sy + TS / 2, z = TS / 44; // icon scale
     const bl = g.blight.get(k);
     if (known) {
-      ctx.fillStyle = TYPE_COLOR[t.type]; ctx.fillRect(sx, sy, TS, TS);
+      ctx.fillStyle = t.temple ? TEMPLE_COLOR : TYPE_COLOR[t.type]; ctx.fillRect(sx, sy, TS, TS);
       const cid = g.claimed.get(k);
       if (cid !== undefined) {
         ctx.strokeStyle = SETTLEMENT_COLORS[(cid - 1) % SETTLEMENT_COLORS.length]; ctx.lineWidth = 2;
@@ -479,10 +483,10 @@
         ctx.stroke();
       }
       const f = g.feature(x, y);
-      if (!f && !t.site && !bl && !g.settlements.some(c => c.x === x && c.y === y)) { // plain tile: faint terrain hint
+      if (!f && !t.site && !t.temple && !bl && !g.settlements.some(c => c.x === x && c.y === y)) { // plain tile: faint terrain hint
         ctx.globalAlpha = 0.22; glyph(TYPE_ICON[t.type], cx, cy, 20 * z); ctx.globalAlpha = 1;
       }
-      if (f) featureIcon(f, cx, cy + (t.site ? 9 : 0) * z, !!bl, z);
+      if (f) featureIcon(f, cx, cy + (t.site ? 9 : 0) * z, !!bl, z, x, y);
       if (t.site) { ctx.globalAlpha = g.siteUsed(k) ? 0.35 : 1; glyph('\u{1F5FF}', cx, cy - (f ? 9 : 0) * z, 26 * z); ctx.globalAlpha = 1; }
       if (bl) {
         ctx.fillStyle = 'rgba(82,24,105,.82)'; ctx.fillRect(sx, sy, TS, TS);
@@ -510,7 +514,7 @@
       if (gl) {
         if (gl.type) { ctx.globalAlpha = 0.4; ctx.fillStyle = TYPE_COLOR[t.type]; ctx.fillRect(sx + 3, sy + 3, TS - 6, TS - 6); ctx.globalAlpha = 1; }
         if (gl.blight && bl) { ctx.fillStyle = 'rgba(110,40,140,.55)'; ctx.fillRect(sx + 3, sy + 3, TS - 6, TS - 6); }
-        if (gl.feature && t.feature) glyph('?', cx, cy + (t.site && gl.site ? 9 : 0) * z, 24 * z, '#e8e0a0');
+        if (gl.feature && g.worldFeature(x, y)) glyph('?', cx, cy + (t.site && gl.site ? 9 : 0) * z, 24 * z, '#e8e0a0');
         if (gl.site && t.site) { ctx.globalAlpha = 0.6; glyph('\u{1F5FF}', cx, cy - (gl.feature && t.feature ? 9 : 0) * z, 24 * z); ctx.globalAlpha = 1; }
       }
     }
@@ -521,8 +525,9 @@
     // the top bar floats over the canvas, so keep arrows inside the part of the map that is actually visible
     const top = el('top').offsetHeight + 20, bottom = H - 20, m = 28;
     arrowHits = [];
-    for (const [k, s] of g.sites) {
-      if (g.siteUsed(k)) continue;
+    const targets = [...g.sites].filter(([k]) => !g.siteUsed(k)).map(([, s]) => [s, '\u{1F5FF}']);
+    if (g.templeFound()) targets.push([g.world.temple, '\u{1F3DB}️']);
+    for (const [s, icon] of targets) {
       const px = W / 2 + (s.x - cam.x) * TS, py = H / 2 + (s.y - cam.y) * TS;
       if (px >= 0 && px <= W && py >= top - 10 && py <= bottom + 10) continue;
       const ax = Math.min(Math.max(px, m), W - m), ay = Math.min(Math.max(py, top + m / 2), bottom - m / 2);
@@ -531,7 +536,7 @@
       ctx.beginPath(); ctx.moveTo(12, 0); ctx.lineTo(-8, -9); ctx.lineTo(-8, 9); ctx.closePath();
       ctx.fillStyle = '#e8d27a'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#000'; ctx.stroke(); ctx.restore();
       arrowHits.push({ x: ax - ux * 11, y: ay - uy * 11, site: s });
-      glyph('\u{1F5FF}', ax - ux * 22, ay - uy * 22, 18);
+      glyph(icon, ax - ux * 22, ay - uy * 22, 18);
     }
   }
 
@@ -542,6 +547,11 @@
     const bx = Math.round(cam.x), by = Math.round(cam.y);
     for (let y = by - rows; y <= by + rows; y++) for (let x = bx - cols; x <= bx + cols; x++) {
       drawTile(x, y, W / 2 + (x - 0.5 - cam.x) * TS, H / 2 + (y - 0.5 - cam.y) * TS);
+    }
+    // the Ancient Temple spans 3x3 tiles, so its glyph goes on top of all of them
+    const tp = g.world.temple;
+    if (g.templeFound() && Math.abs(tp.x - bx) <= cols + 1 && Math.abs(tp.y - by) <= rows + 1) {
+      glyph('\u{1F3DB}️', W / 2 + (tp.x - cam.x) * TS, H / 2 + (tp.y - cam.y) * TS, TS * 2.4);
     }
     // crosshair on the tile the panel describes
     const c = centre();

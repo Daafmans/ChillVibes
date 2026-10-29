@@ -1,4 +1,5 @@
 # TODO
 
 - [ ] Add more projects: the game needs more projects for players to work on.
-- [ ] Rebalance relics: the player gets all the relics way too easily and quickly.
+- [ ] Three victory styles: Exploration, Building, Projects (&Blight?)
+- [ ] Projects are structured in a tree, but unlocked by picking from random options

@@ -1,5 +1,5 @@
 (function (CV) {
-  const { K, CFG, RES, COLORS } = CV;
+  const { K, CFG, RES } = CV;
 
   function hash3(a, b, c) {
     let h = Math.imul(a | 0, 374761393) ^ Math.imul(b | 0, 668265263) ^ Math.imul(c | 0, 2147483629);
@@ -9,25 +9,18 @@
     return (h >>> 0) / 4294967296;
   }
 
-  // Pick a feature valid on this base tile type from one uniform random. scale multiplies bonus amounts (not relics).
-  // The lowest relicShare of u picks a relic, the rest picks an ordinary tile feature.
-  // noRelics excludes relics entirely (used for features created by ancient sites).
-  CV.makeFeature = function (u, type, scale, noRelics) {
+  // Pick a feature valid on this base tile type from one uniform random. scale multiplies bonus amounts.
+  // hidden picks from the hidden features instead of the normal ones.
+  CV.makeFeature = function (u, type, scale, hidden) {
     scale = scale || 1;
-    const valid = CV.FEATURES.filter(f => f.on.includes(type) && !(noRelics && f.kind === 'relic'));
-    const relics = valid.filter(f => f.kind === 'relic'), tiles = valid.filter(f => f.kind !== 'relic');
-    const isRelic = relics.length && (!tiles.length || u < CFG.relicShare);
-    const pool = isRelic ? relics : tiles;
-    if (isRelic && tiles.length) u /= CFG.relicShare; else if (tiles.length && relics.length) u = (u - CFG.relicShare) / (1 - CFG.relicShare);
+    const pool = CV.FEATURES.filter(f => f.kind === 'tile' && f.on.includes(type) && !f.hidden === !hidden);
     const d = pool[Math.min(pool.length - 1, Math.max(0, Math.floor(u * pool.length)))];
-    const f = { id: d.id, name: d.name, kind: d.kind };
-    if (d.kind === 'relic') f.color = d.color;
-    else {
-      f.res = d.res;
-      const base = Array.isArray(d.res) ? CFG.allFeatureAmount : CFG.tileFeatureAmount;
-      f.amount = Math.max(1, Math.round(base * scale));
-    }
-    return f;
+    const base = d.hidden ? CFG.hiddenFeatureAmount : Array.isArray(d.res) ? CFG.allFeatureAmount : CFG.tileFeatureAmount;
+    return { id: d.id, name: d.name, kind: d.kind, res: d.res, hidden: d.hidden, amount: Math.max(1, Math.round(base * scale)) };
+  };
+  CV.makeRuins = function () {
+    const d = CV.FEATURES.find(f => f.id === 'ruins');
+    return { id: d.id, name: d.name, kind: d.kind };
   };
 
   class World {
@@ -35,7 +28,19 @@
       this.seed = seed;
       this.cache = new Map();
       this.makeBlob();
+      this.makeTemple();
     }
+    // Ancient Temple: a 3x3 block whose centre lies templeMinDistance..templeMaxDistance (Chebyshev) from the start.
+    // The centre is kept one tile inside that band so every temple tile is within it.
+    makeTemple() {
+      const rng = CV.mulberry32(this.seed * 613 + 5);
+      const lo = CFG.templeMinDistance + 1, hi = Math.max(lo, CFG.templeMaxDistance - 1);
+      const d = lo + Math.floor(rng() * (hi - lo + 1));
+      const along = Math.floor(rng() * (2 * d + 1)) - d, side = Math.floor(rng() * 4);
+      const [x, y] = [[along, -d], [d, along], [along, d], [-d, along]][side];
+      this.temple = { x, y };
+    }
+    isTemple(x, y) { return CV.cheb(x, y, this.temple.x, this.temple.y) <= 1; }
     rnd(x, y, salt) { return hash3(x, y, salt * 7919 + this.seed * 131); }
     noise(x, y, scale, salt) {
       const gx = Math.floor(x / scale), gy = Math.floor(y / scale);
@@ -80,6 +85,8 @@
       return m < CFG.mountainBelow ? 'mountains' : m < CFG.forestBelow ? 'forest' : 'plains';
     }
     gen(x, y, k) {
+      // temple tiles are plain land with nothing else on them
+      if (this.isTemple(x, y)) return { x, y, type: 'plains', feature: null, hidden: null, site: false, temple: true };
       let type;
       if (this.blob.has(k)) type = this.landType(x, y);
       else {
@@ -90,12 +97,18 @@
         else if (this.noise(x, y, 20, 5) > CFG.desertThreshold && !this.ring.has(k)) type = 'desert';
         else type = this.landType(x, y);
       }
-      let feature = null, site = false;
+      let feature = null, hidden = null, site = false;
       if (CV.cheb(x, y, 0, 0) >= CFG.startSafeRadius) {
         if (type !== 'ocean' && CV.cheb(x, y, 0, 0) >= CFG.siteMinDistance && this.rnd(x, y, 12) < CFG.siteChance) site = true;
         else if (this.rnd(x, y, 10) < CFG.featureChance) feature = CV.makeFeature(this.rnd(x, y, 11), type, 1);
+        // hidden features use their own rolls so they don't change the rest of the world
+        else if (CV.FEATURES.some(f => f.hidden && f.on.includes(type)) && this.rnd(x, y, 14) < CFG.hiddenFeatureChance) {
+          hidden = CV.makeFeature(this.rnd(x, y, 15), type, 1, true);
+        }
+        // ruins use their own roll too, on land tiles left empty by everything above
+        else if (type !== 'ocean' && this.rnd(x, y, 16) < CFG.ruinsChance) feature = CV.makeRuins();
       }
-      return { x, y, type, feature, site };
+      return { x, y, type, feature, hidden, site };
     }
   }
   CV.World = World;

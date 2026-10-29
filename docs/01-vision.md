@@ -3,7 +3,7 @@
 *Status: draft v0.2. Rewritten around the designer's detailed brief. Gaps and guesses are marked **[ASSUMPTION]** and collected in `04-open-questions.md`.*
 
 ## Pitch
-A single-player, turn-based empire builder, Civilization reduced to its core. You start with one revealed square of an unknown world. Each turn you choose where to **explore** and where to **expand**, while **blight** spreads across the land and slowly squeezes you. You win by building enough settlements, finding ancient sites, or finishing enough projects, before blight takes your last settlement.
+A single-player, turn-based empire builder, Civilization reduced to its core. You start with one revealed square of an unknown world. Each turn you choose where to **explore** and where to **expand**, while **blight** spreads across the land and slowly squeezes you. You win by building enough settlements, finding enough ancient sites, or finding the far-off Ancient Temple and awakening its gods before blight takes your last settlement.
 
 ## Pillars
 1. **Empire building is the game.** No units, no combat, no diplomacy. You work with a map, three resources and a project list.

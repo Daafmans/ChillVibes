@@ -23,19 +23,13 @@ for (const raw of lines.slice(start + 1)) {
   const depth = indent / 2;
   if (depth > stack.length) throw new Error(`${where}: indented more than one level below its parent`);
   const f = m[2].split('|').map(s => s.trim());
-  if (f.length !== 5) throw new Error(`${where}: expected "id | Name | Effect | Relics | Repeatable"`);
-  const [id, name, desc, relicTxt, rep] = f;
+  if (f.length !== 4) throw new Error(`${where}: expected "id | Name | Effect | Repeatable"`);
+  const [id, name, desc, rep] = f;
   if (!/^[a-z]+$/.test(id)) throw new Error(`${where}: id must be lowercase letters`);
   if (projects.some(p => p.id === id)) throw new Error(`${where}: duplicate id`);
-  let relic = null;
-  if (relicTxt !== '-') {
-    const r = relicTxt.match(/^(\d+) (\w+)$/);
-    if (!r) throw new Error(`${where}: relics must be "-" or "<amount> <colour>"`);
-    relic = { n: +r[1], color: r[2].toLowerCase() };
-  }
   if (!/^(yes|no)$/i.test(rep)) throw new Error(`${where}: repeatable must be yes or no`);
   stack.length = depth;
-  projects.push({ id, cat, name, parent: depth ? stack[depth - 1] : null, multi: /^yes$/i.test(rep), relic, desc: desc.replace(/\*\*/g, '') });
+  projects.push({ id, cat, name, parent: depth ? stack[depth - 1] : null, multi: /^yes$/i.test(rep), desc: desc.replace(/\*\*/g, '') });
   stack[depth] = id;
 }
 if (!projects.length) throw new Error('no projects found');

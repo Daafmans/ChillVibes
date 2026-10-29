@@ -14,23 +14,60 @@ for (const [k, v] of params) if (k in CFG) CFG[k] = +v;
 
 function assert(c, m) { if (!c) log('ASSERT FAILED: ' + m); }
 
+// Rough value of an upgrade for one settlement, in resources per turn (sites count as a one-off worth ~8/turn).
+function upgradeScore(g, c, id) {
+  const tiles = g.settlementTiles.get(c.id) || [];
+  const clean = tiles.filter(t => !g.blight.has(t.k));
+  if (id === 'surveypost') return 2;
+  if (id === 'desertbloom') return 3 * clean.filter(t => g.world.tile(t.x, t.y).type === 'desert').length;
+  if (id === 'artisanquarter') return clean.reduce((s, t) => {
+    const f = g.feature(t.x, t.y);
+    let v = f && f.kind === 'tile' ? f.amount * [].concat(f.res).length : 0;
+    if (g.taken.relics) v += (g.world.tile(t.x, t.y).site ? CFG.relicSiteMaterials : 0) + (f && f.kind === 'ruins' ? CFG.relicRuinsWealth : 0);
+    return s + v;
+  }, 0);
+  if (id === 'scavenger') return 3 * (tiles.length - clean.length) + (g.taken.dwell ? 5 : 0);
+  if (id === 'tradingpost') {
+    const n = new Set();
+    for (const t of clean) for (const [dx, dy] of CV.N4) { const o = g.claimed.get(K(t.x + dx, t.y + dy)); if (o !== undefined && o !== c.id) n.add(o); }
+    return 3 * CFG.tradeBonus * n.size;
+  }
+  if (id === 'markettown') {
+    // extra partner weight for each bordering Trading Post
+    const n = new Set();
+    for (const t of tiles) for (const [dx, dy] of CV.N4) { const o = g.claimed.get(K(t.x + dx, t.y + dy)); if (o !== undefined && o !== c.id && (g.settlementById(o) || {}).upgrade === 'tradingpost') n.add(o); }
+    return 3 * CFG.tradeBonus * (CFG.marketTownWeight - 1) * n.size;
+  }
+  if (id === 'shrinekeeper') return 8 * [...g.sites.values()].filter(s => CV.cheb(s.x, s.y, c.x, c.y) <= CFG.shrineKeeperRadius).length;
+  return 0;
+}
+
 // Bot: uses everything sensibly. mode: 'idle' (only ends turns) or 'bot'
 function play(seed, mode, maxTurns) {
   const g = new CV.Game(seed);
   let firstLoss = null;
   for (let i = 0; i < maxTurns && !g.over; i++) {
     if (mode === 'bot') {
-      // activate sites: prefer bundle when poor, cleanse when blight exists, else settlement/explore/features
+      // activate sites: take the location benefit (cleanse first when blight exists), else fall back to the bundle
       for (const [key] of g.sites) {
         if (g.siteUsed(key)) continue;
-        const offer = g.siteOffer(key);
         const order = g.blight.size ? ['cleanse', 'settlement', 'explore', 'features', 'bundle'] : ['settlement', 'explore', 'features', 'bundle', 'cleanse'];
         for (const id of order) if (g.activateSite(key, id).ok) break;
       }
       // projects
       while (g.projectAvailable()) {
-        const o = g.projectOffer().filter(p => g.relicsOk(p.relic));
+        const o = g.projectOffer();
         if (!o.length || !g.chooseProject(o[Math.floor(g.rng() * o.length)].id).ok) break;
+      }
+      // upgrades: give each settlement the unlocked upgrade that suits its tiles best
+      for (const c of g.settlements) {
+        if (c.upgrade || g.res.wealth < CFG.upgradeCost) continue;
+        let best = null, bs = 0;
+        for (const u of g.upgradeOffer()) {
+          const s = upgradeScore(g, c, u.id);
+          if (s > bs) { bs = s; best = u.id; }
+        }
+        if (best) g.upgrade(c.id, best);
       }
       // found settlements greedily
       for (let n = 0; n < 5; n++) {
@@ -119,7 +156,86 @@ try {
       const p = new CV.Game(5); p.taken.cartography = 1; p.res.wealth = CV.CFG.upgradeCost - 1;
       assert(!p.canUpgrade(1, 'surveypost').ok, 'upgrade needs wealth');
     }
-    g.taken.wider = 1; g.claimAll(); assert(g.claimed.size === 25, 'wider claims 25, got ' + g.claimed.size);
+  }
+  // ancient sites: one location benefit plus a one-resource bundle; each Bountiful Sites copy adds a benefit until all are offered
+  {
+    const h = new CV.Game(5);
+    h.sites.set(1, { x: 5, y: 5 });
+    const o = h.siteOffer(1).options;
+    const bundle = o.find(x => x.id === 'bundle').bundle, keys = Object.keys(bundle);
+    assert(o.length === CFG.siteOptionCount + 1, 'site offers ' + o.length + ' options');
+    assert(keys.length === 1 && CV.RES.includes(keys[0]), 'bundle is one resource: ' + JSON.stringify(bundle));
+    assert(bundle[keys[0]] >= CFG.siteBundleMin && bundle[keys[0]] <= CFG.siteBundleMin + CFG.siteBundleVariance, 'bundle size ' + bundle[keys[0]]);
+    const before = h.res[keys[0]];
+    assert(h.activateSite(1, 'bundle').ok && h.res[keys[0]] === before + bundle[keys[0]], 'bundle pays out');
+    h.taken.sight = 1;
+    let copies = 0;
+    while (h.projectOffer().some(p => p.id === 'bounty') && copies < 10) {
+      h.res.materials = h.threshold;
+      assert(h.chooseProject('bounty').ok, 'bounty can be taken');
+      copies++;
+      assert(JSON.stringify(h.siteOffer(1).options.find(x => x.id === 'bundle').bundle) === JSON.stringify(bundle), 'bounty keeps the bundle');
+    }
+    const kinds = h.siteOffer(1).options.filter(x => x.id !== 'bundle').length;
+    assert(kinds === 4 && copies === Math.ceil((4 - CFG.siteOptionCount) / CFG.bountyOptions), `bounty maxes out: ${copies} copies, ${kinds} benefits`);
+  }
+  // Deep Wells: hidden Buried Aquifers only exist once the project is taken
+  {
+    const h = new CV.Game(5);
+    let at = null;
+    for (let x = 3; !at && x < 200; x++) for (let y = -100; !at && y < 100; y++) if (h.world.tile(x, y).hidden) at = [x, y];
+    assert(at, 'world has a hidden feature');
+    if (at) {
+      assert(!h.feature(...at), 'hidden feature absent before Deep Wells');
+      h.taken.wells = 1;
+      const f = h.feature(...at);
+      assert(f && f.id === 'buriedAquifer' && f.amount === CFG.hiddenFeatureAmount, 'Deep Wells reveals the aquifer');
+    }
+  }
+  // Ancient Temple: 3x3 within the distance band, revealed whole, awakened only with the project
+  for (const seed of [1, 2, 3, 42, 777]) {
+    const h = new CV.Game(seed), t = h.world.temple;
+    for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
+      const d = CV.cheb(t.x + dx, t.y + dy, 0, 0);
+      assert(d >= CFG.templeMinDistance && d <= CFG.templeMaxDistance, `seed ${seed}: temple tile at distance ${d}`);
+      assert(h.world.tile(t.x + dx, t.y + dy).temple, 'temple tile flagged');
+    }
+    assert(!h.world.tile(t.x + 2, t.y).temple, 'temple is only 3x3');
+    assert(!h.templeFound(), 'temple starts hidden');
+    h.reveal(t.x + 1, t.y - 1);
+    let n = 0;
+    for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) if (h.isKnown(t.x + dx, t.y + dy)) n++;
+    assert(n === 9 && h.templeFound(), 'revealing one temple tile reveals all nine: ' + n);
+    assert(!h.awaken(t.x, t.y).ok, 'awakening needs the project');
+    h.taken.awakening = 1;
+    assert(!h.awaken(t.x + 2, t.y).ok, 'awakening only on the temple');
+    assert(h.awaken(t.x - 1, t.y + 1).ok && h.over && h.over.won && h.over.how === 'temple', 'awakening wins');
+    // Economic Dominion: enough upgraded living settlements win on End turn, only with the project
+    const e = new CV.Game(7), winUpgrades = CFG.winUpgrades;
+    CFG.winUpgrades = 3; // stay clear of the settlement victory
+    for (let i = 1; i < CFG.winUpgrades; i++) e.settlements.push({ id: 1000 + i, x: i * 10, y: 50, upgrade: 'surveypost' });
+    e.fallen.push({ id: 999, x: 0, y: 90, upgrade: 'surveypost' });
+    e.taken.dominion = 1; e.endTurn();
+    assert(!e.over, 'fallen settlements do not count for economic victory');
+    e.settlements[0].upgrade = 'surveypost'; e.taken.dominion = 0; e.endTurn();
+    assert(!e.over, 'economic victory needs the project');
+    e.taken.dominion = 1; e.endTurn();
+    assert(e.over && e.over.won && e.over.how === 'economy', 'economic victory');
+    CFG.winUpgrades = winUpgrades;
+    // Ruins exist, never come from ancient-site feature rolls, and point at the temple
+    const dirs = { north: [0, -1], south: [0, 1], east: [1, 0], west: [-1, 0] };
+    for (const [x, y] of [[0, 0], [t.x, t.y - 50], [t.x + 50, t.y], [t.x - 3, t.y + 1]]) {
+      const [ux, uy] = dirs[h.ruinDirection(x, y)];
+      assert((t.x - x) * ux + (t.y - y) * uy > 0, `ruins at ${x},${y} point ${h.ruinDirection(x, y)} away from the temple`);
+    }
+  }
+  {
+    const w = new CV.World(5);
+    let ruins = 0;
+    for (let x = -100; x < 100; x++) for (let y = -100; y < 100; y++) { const f = w.tile(x, y).feature; if (f && f.kind === 'ruins') ruins++; }
+    log('ruins in 200x200: ' + ruins);
+    assert(ruins > 0, 'world has ruins');
+    for (let i = 0; i < 200; i++) assert(CV.makeFeature(i / 200, 'plains', 1).kind === 'tile', 'makeFeature never yields ruins');
   }
   // idle: how fast does blight kill a lone settlement?
   for (const seed of [1, 2, 3]) {
@@ -131,6 +247,9 @@ try {
     const t = performance.now();
     const g = play(seed, 'bot', 300);
     const p = g.progress();
+    const ups = {};
+    for (const c of g.settlements.concat(g.fallen)) if (c.upgrade) ups[c.upgrade] = (ups[c.upgrade] || 0) + 1;
+    log(`bot seed ${seed}: upgrades ${JSON.stringify(ups)}`);
     log(`bot seed ${seed}: ${g.over ? (g.over.won ? 'WON(' + g.over.how + ') t' + g.over.turn : 'lost t' + g.over.turn) : 'alive t' + g.turn} settlements ${p.settlements} sites ${p.sites} proj ${p.projects} known ${g.known.size} blight ${g.blight.size} res ${JSON.stringify(g.res)} ${(performance.now() - t) | 0}ms`);
   }
 } catch (e) { log('EXCEPTION ' + e.stack); }

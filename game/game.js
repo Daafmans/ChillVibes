@@ -1,5 +1,5 @@
 (function (CV) {
-  const { K, CFG, RES, COLORS, N8, BASE_YIELD, PROJECTS, cheb } = CV;
+  const { K, CFG, RES, N8, N4, BASE_YIELD, PROJECTS, cheb } = CV;
   const SITE_KINDS = ['explore', 'features', 'settlement', 'cleanse'];
 
   class Game {
@@ -50,8 +50,7 @@
       g.known = new Set(s.known); g.near = new Map(s.near); g.sites = new Map(s.sites); g.siteUses = new Map(s.siteUses || (s.usedSites || []).map(k => [k, 1]));
       g.deferredSites = new Set(s.deferredSites || []);
       g.overrides = new Map(s.overrides); g.blight = new Map(s.blight); g.taken = s.taken;
-      g.projectCount = s.projectCount; g.threshold = s.threshold;
-      g.exploredThisTurn = s.exploredThisTurn; g.over = s.over; g.log = s.log;
+      g.projectCount = s.projectCount; g.threshold = s.threshold;      g.exploredThisTurn = s.exploredThisTurn; g.over = s.over; g.log = s.log;
       g.claimAll();
       return g;
     }
@@ -60,7 +59,12 @@
 
     // ---------- knowledge ----------
     isKnown(x, y) { return this.known.has(K(x, y)); }
-    feature(x, y) { return this.overrides.get(K(x, y)) || this.world.tile(x, y).feature; }
+    feature(x, y) { return this.overrides.get(K(x, y)) || this.worldFeature(x, y); }
+    // The generated feature, including a hidden one once its project is taken (Deep Wells).
+    worldFeature(x, y) {
+      const t = this.world.tile(x, y);
+      return t.feature || (t.hidden && this.taken[t.hidden.hidden] ? t.hidden : null);
+    }
     reveal(x, y) {
       const k = K(x, y);
       if (this.known.has(k)) return;
@@ -74,7 +78,10 @@
         const o = this.near.get(nk);
         if (o === undefined || d < o) this.near.set(nk, d);
       }
-      if (this.world.tile(x, y).site) this.sites.set(k, { x, y });
+      const t = this.world.tile(x, y);
+      if (t.site) this.sites.set(k, { x, y });
+      // exploring any Ancient Temple tile reveals the whole temple
+      if (t.temple) this.revealArea(this.world.temple.x, this.world.temple.y, 1);
     }
     revealArea(cx, cy, r) {
       for (let dx = -r; dx <= r; dx++) for (let dy = -r; dy <= r; dy++) this.reveal(cx + dx, cy + dy);
@@ -111,25 +118,14 @@
     // ---------- settlements ----------
     claimAll() {
       this.claimed.clear(); this.settlementTiles = new Map();
-      const r = CFG.settlementClaimRadius, corners = !!this.taken.wider;
+      const r = CFG.settlementClaimRadius;
       for (const c of this.settlements.concat(this.fallen)) {
         const arr = []; this.settlementTiles.set(c.id, arr);
         for (let dx = -r; dx <= r; dx++) for (let dy = -r; dy <= r; dy++) {
-          if (!corners && Math.abs(dx) + Math.abs(dy) > 2 * r - 1) continue;
+          if (Math.abs(dx) + Math.abs(dy) > 2 * r - 1) continue;
           const x = c.x + dx, y = c.y + dy, k = K(x, y);
           if (this.claimed.has(k)) continue;
           this.claimed.set(k, c.id); arr.push({ x, y, k });
-          this.reveal(x, y);
-        }
-      }
-      // Boundary Stones: the four tiles straight out from the settlement, claimed after every settlement's regular tiles
-      const reach = CFG.boundaryStoneReach;
-      for (const c of this.settlements.concat(this.fallen)) {
-        if (c.upgrade !== 'boundarystones') continue;
-        for (const [dx, dy] of [[0, -1], [1, 0], [0, 1], [-1, 0]]) {
-          const x = c.x + dx * reach, y = c.y + dy * reach, k = K(x, y);
-          if (this.claimed.has(k)) continue;
-          this.claimed.set(k, c.id); this.settlementTiles.get(c.id).push({ x, y, k });
           this.reveal(x, y);
         }
       }
@@ -182,7 +178,6 @@
       if (!c.ok) return c;
       this.res.wealth -= c.cost;
       this.settlements.find(s => s.id === sid).upgrade = uid;
-      if (uid === 'boundarystones') this.claimAll();
       this.say(`Settlement #${sid} upgraded: ${CV.UPGRADES.find(u => u.id === uid).name}.`);
       return c;
     }
@@ -216,6 +211,20 @@
       }
       return out;
     }
+    // Desert Survey: every desert tile 8-connected to (x, y), capped for safety.
+    desertRegion(x, y) {
+      const seen = new Set([K(x, y)]), out = [[x, y]];
+      for (let i = 0; i < out.length && out.length < CFG.desertSurveyMax; i++) {
+        const [cx, cy] = out[i];
+        for (const [dx, dy] of N8) {
+          const tx = cx + dx, ty = cy + dy, k = K(tx, ty);
+          if (seen.has(k)) continue;
+          seen.add(k);
+          if (this.world.tile(tx, ty).type === 'desert') out.push([tx, ty]);
+        }
+      }
+      return out;
+    }
     canExplore(x, y) {
       const cost = 0, bonus = this.exploreBonus();
       if (this.over) return { ok: false, cost, bonus, reason: 'Game over' };
@@ -236,24 +245,19 @@
       const c = this.canExplore(x, y);
       if (!c.ok) return c;
       this.exploredThisTurn = true;
-      let cleansed = 0;
       const tiles = this.extraTiles(x, y, c.bonus);
       for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) tiles.push([x + dx, y + dy]);
-      const found = { site: false, feature: false };
+      if (this.taken.dunes && this.world.tile(x, y).type === 'desert') tiles.push(...this.desertRegion(x, y));
+      const found = { temple: false, site: false, feature: false };
       for (const [tx, ty] of tiles) {
         const k = K(tx, ty);
         if (!this.known.has(k)) {
-          if (this.world.tile(tx, ty).site) found.site = true;
+          if (this.world.tile(tx, ty).temple) found.temple = true;
+          else if (this.world.tile(tx, ty).site) found.site = true;
           else if (this.feature(tx, ty)) found.feature = true;
         }
         this.reveal(tx, ty);
-        const b = this.blight.get(k);
-        if (!b) continue;
-        if (b.pustule) {
-          if (this.taken.burst) { this.blight.delete(k); this.say(`A pustule at ${tx},${ty} burst and was destroyed!`); }
-        } else if (this.taken.fight) { this.blight.delete(k); cleansed++; }
       }
-      if (cleansed) this.say(`Cleansed ${cleansed} blighted tile${cleansed > 1 ? 's' : ''}.`);
       return { ...c, found };
     }
 
@@ -273,33 +277,38 @@
         if (owner && owner.upgrade === 'desertbloom') RES.forEach(r => out[r] = 1);
       }
       const f = this.feature(x, y);
+      const owner = this.settlementById(this.claimed.get(K(x, y)));
+      const artisan = owner && owner.upgrade === 'artisanquarter';
       if (f && f.kind === 'tile') {
         // Artisan Quarter: special tile bonuses are doubled for the owning settlement
-        const owner = this.settlementById(this.claimed.get(K(x, y)));
-        const mult = owner && owner.upgrade === 'artisanquarter' ? 2 : 1;
+        const mult = artisan ? 2 : 1;
         for (const r of [].concat(f.res)) out[r] = (out[r] || 0) + f.amount * mult;
       }
-      // Relic Veneration: claimed relic tiles yield extra of each resource
-      if (f && f.kind === 'relic' && this.taken.veneration && this.claimed.has(K(x, y))) {
-        RES.forEach(r => out[r] = (out[r] || 0) + CFG.relicYield);
+      // Relic Restoration: Artisan Quarters profit from claimed ancient sites and ruins
+      if (artisan && this.taken.relics) {
+        if (this.world.tile(x, y).site) out.materials = (out.materials || 0) + CFG.relicSiteMaterials;
+        if (f && f.kind === 'ruins') out.wealth = (out.wealth || 0) + CFG.relicRuinsWealth;
       }
       return out;
     }
     income() {
       const tot = { food: 0, materials: 0, wealth: 0 };
-      const trade = this.taken.trade || 0, glor = this.taken.glorious || 0;
+      const glor = this.taken.glorious || 0;
       this.settlements.forEach((c, i) => {
-        let touch = false;
+        const trade = c.upgrade === 'tradingpost', neighbours = new Set();
         for (const t of this.settlementTiles.get(c.id) || []) {
           const y = this.tileYield(t.x, t.y);
           for (const r in y) tot[r] += y[r];
           if (this.blight.has(t.k)) continue;
-          if (trade && !touch) for (const [dx, dy] of N8) {
+          if (trade) for (const [dx, dy] of N4) {
             const o = this.claimed.get(K(t.x + dx, t.y + dy));
-            if (o !== undefined && o !== c.id) { touch = true; break; }
+            if (o !== undefined && o !== c.id) neighbours.add(o);
           }
         }
-        if (trade && touch) RES.forEach(r => tot[r] += CFG.tradeBonus * trade);
+        // Market Town: a bordering Market Town counts as marketTownWeight settlements
+        let partners = 0;
+        for (const o of neighbours) partners += (this.settlementById(o) || {}).upgrade === 'markettown' ? CFG.marketTownWeight : 1;
+        if (partners) RES.forEach(r => tot[r] += Math.round(CFG.tradeBonus * partners));
         if (glor && i === 0) {
           const n = this.settlements.filter(o => o !== c && cheb(o.x, o.y, c.x, c.y) <= CFG.gloriousRadius).length;
           RES.forEach(r => tot[r] += CFG.gloriousBonus * glor * n);
@@ -312,37 +321,27 @@
       }
       return tot;
     }
-    relicCount(color) {
-      let n = 0;
-      for (const tiles of this.settlementTiles.values()) for (const t of tiles) {
-        if (this.blight.has(t.k)) continue;
-        const f = this.feature(t.x, t.y);
-        if (f && f.kind === 'relic' && f.color === color) n++;
-      }
-      return n;
-    }
-    relicsOk(req) { return !req || this.relicCount(req.color) >= req.n; }
-
     // ---------- projects ----------
     projectAvailable() { return !this.over && this.res.materials >= this.threshold; }
     unlocked(p) { return !p.parent || !!this.taken[p.parent]; }
-    // Tree: roots plus children of taken projects; one-time projects drop out once taken. Ascension is always last.
+    // A repeatable project that another copy would no longer improve.
+    maxed(id) {
+      if (id === 'bounty') return CFG.siteOptionCount + (this.taken.bounty || 0) * CFG.bountyOptions >= SITE_KINDS.length;
+      return false;
+    }
+    // Tree: roots plus children of taken projects; one-time projects drop out once taken, repeatable ones once maxed.
     projectOffer() {
-      const tree = PROJECTS.filter(p => !p.ascension && this.unlocked(p) && (p.multi || !this.taken[p.id]));
-      return tree.concat(PROJECTS.filter(p => p.ascension));
+      return PROJECTS.filter(p => this.unlocked(p) && (p.multi ? !this.maxed(p.id) : !this.taken[p.id]));
     }
     chooseProject(id) {
       if (!this.projectAvailable()) return { ok: false, reason: 'Not enough materials' };
       const p = this.projectOffer().find(o => o.id === id);
       if (!p) return { ok: false, reason: 'Not offered' };
-      if (!this.relicsOk(p.relic)) return { ok: false, reason: 'Missing relics' };
       this.res.materials -= this.threshold;
       this.taken[id] = (this.taken[id] || 0) + 1;
-      if (!p.ascension) {
-        this.threshold = Math.ceil(this.threshold * CFG.projectGrowth);
-        this.projectCount++;
-      }
-      if (id === 'wider') this.claimAll();
+      this.threshold = Math.ceil(this.threshold * CFG.projectGrowth);
+      this.projectCount++;
+      if (id === 'bounty') this.siteOffers.clear(); // offers are seeded per site, so rebuilding only adds the extra option
       this.say(`Project: ${p.name}.`);
       return { ok: true };
     }
@@ -362,10 +361,12 @@
       const rng = CV.mulberry32(CV.hash3(s.x, s.y, 99) * 1e9 | 0);
       const kinds = SITE_KINDS.slice();
       for (let i = kinds.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [kinds[i], kinds[j]] = [kinds[j], kinds[i]]; }
-      const opts = kinds.slice(0, CFG.siteOptionCount).map(id => ({ id, req: null }));
+      const n = CFG.siteOptionCount + (this.taken.bounty || 0) * CFG.bountyOptions;
+      const opts = kinds.slice(0, n).map(id => ({ id }));
+      // the bundle is a single resource, rolled after the shuffle so Bountiful Sites copies don't change it
       const sc = this.legacyScale(s.x, s.y);
-      const base = () => Math.round((CFG.siteBundleMin + rng() * CFG.siteBundleVariance) * sc);
-      opts.push({ id: 'bundle', req: null, bundle: { food: base(), materials: base(), wealth: base() } });
+      const res = RES[Math.floor(rng() * RES.length)];
+      opts.push({ id: 'bundle', bundle: { [res]: Math.round((CFG.siteBundleMin + rng() * CFG.siteBundleVariance) * sc) } });
       o = { x: s.x, y: s.y, options: opts };
       this.siteOffers.set(key, o);
       return o;
@@ -391,8 +392,9 @@
       if (bad) return { ok: false, reason: bad };
       const sc = this.legacyScale(s.x, s.y);
       if (opt.id === 'bundle') {
-        RES.forEach(r => this.res[r] += opt.bundle[r]);
-        this.say(`Ancient site: gained ${opt.bundle.food} food, ${opt.bundle.materials} materials, ${opt.bundle.wealth} wealth.`);
+        const [r, amt] = Object.entries(opt.bundle)[0];
+        this.res[r] += amt;
+        this.say(`Ancient site: gained ${amt} ${r}.`);
       } else if (opt.id === 'explore') {
         this.revealBlob(s.x, s.y, CFG.siteExploreRadius, CV.mulberry32(CV.hash3(s.x, s.y, 13) * 1e9 | 0));
         this.say('Ancient site: a large area was revealed.');
@@ -403,7 +405,7 @@
         while (placed < CFG.siteFeatureCount && tries++ < 200) {
           const x = s.x + Math.floor(rng() * (2 * fr + 1)) - fr, y = s.y + Math.floor(rng() * (2 * fr + 1)) - fr, t = this.world.tile(x, y);
           if (t.site || this.feature(x, y) || (x === s.x && y === s.y)) continue;
-          this.overrides.set(K(x, y), CV.makeFeature(rng(), t.type, sc, true));
+          this.overrides.set(K(x, y), CV.makeFeature(rng(), t.type, sc));
           placed++;
         }
         this.say('Ancient site: two special features appeared nearby.');
@@ -418,6 +420,30 @@
       this.siteUses.set(key, (this.siteUses.get(key) || 0) + 1);
       this.deferredSites.delete(key);
       return { ok: true };
+    }
+
+    // ---------- ancient temple ----------
+    templeFound() { const t = this.world.temple; return this.known.has(K(t.x, t.y)); }
+    // Ruin Lore: the cardinal direction from a tile to the temple centre, along the larger offset (ties go east/west).
+    ruinDirection(x, y) {
+      const t = this.world.temple, dx = t.x - x, dy = t.y - y;
+      if (Math.abs(dx) >= Math.abs(dy)) return dx > 0 ? 'east' : 'west';
+      return dy > 0 ? 'south' : 'north';
+    }
+    canAwaken(x, y) {
+      if (this.over) return { ok: false, reason: 'Game over' };
+      if (!this.world.tile(x, y).temple) return { ok: false, reason: 'Not the Ancient Temple' };
+      if (!this.known.has(K(x, y))) return { ok: false, reason: 'Unexplored' };
+      if (!this.taken.awakening) return { ok: false, reason: 'Needs the Awakening project' };
+      return { ok: true };
+    }
+    // Awakening the gods wins at once: it is a deliberate action, unlike the counted goals checked on End turn.
+    awaken(x, y) {
+      const c = this.canAwaken(x, y);
+      if (!c.ok) return c;
+      this.say('The gods awaken at the Ancient Temple.');
+      this.over = { won: true, how: 'temple', turn: this.turn };
+      return c;
     }
 
     // ---------- blight ----------
@@ -473,13 +499,14 @@
 
     // ---------- turns ----------
     progress() {
-      return { settlements: this.settlements.length, sites: this.sites.size, projects: this.projectCount, ascensions: this.taken.ascension || 0 };
+      return { settlements: this.settlements.length, sites: this.sites.size, projects: this.projectCount, upgrades: this.settlements.filter(c => c.upgrade).length };
     }
     checkWin() {
       const p = this.progress();
       if (p.settlements >= CFG.winSettlements) return 'settlements';
       if (p.sites >= CFG.winSites) return 'sites';
-      if (p.ascensions >= CFG.winAscensions) return 'ascension';
+      // Economic Dominion: upgraded settlements still standing (fallen ones don't count)
+      if (this.taken.dominion && p.upgrades >= CFG.winUpgrades) return 'economy';
       return null;
     }
     endTurn() {

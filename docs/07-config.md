@@ -16,7 +16,7 @@ All tunable gameplay numbers live in `CV.CFG` in `game/config.js`. Every value i
 |---|---|---|
 | `settlementBaseCost` | 40 | Food cost of a settlement; `cost = ceil(base * growth^(settlements-1))` |
 | `settlementCostGrowth` | 1.45 | Cost multiplier per existing settlement |
-| `settlementClaimRadius` | 2 | Base border radius (diamond); Wider Borders also claims the corners of the surrounding square |
+| `settlementClaimRadius` | 2 | Border radius: settlements claim the square of this radius minus its four corners (21 tiles at 2) |
 
 ## Upgrades
 
@@ -24,14 +24,16 @@ All tunable gameplay numbers live in `CV.CFG` in `game/config.js`. Every value i
 |---|---|---|
 | `upgradeCost` | 30 | Wealth cost of a settlement upgrade (once per settlement) |
 | `surveyPostTiles` | 1 | Survey Post: extra tiles revealed by each exploration, per upgraded settlement |
-| `boundaryStoneReach` | 3 | Boundary Stones: distance of the extra claimed tile in each cardinal direction |
+| `relicSiteMaterials` | 2 | Relic Restoration: materials per turn from each ancient site claimed by an Artisan Quarter |
+| `relicRuinsWealth` | 2 | Relic Restoration: wealth per turn from each ruins tile claimed by an Artisan Quarter |
 | `shrineKeeperRadius` | 10 | Shrine Keeper: ancient sites within this Chebyshev distance get one extra activation per Shrine Keeper |
 
 ## Exploring
 
 | Key | Default | Description |
 |---|---|---|
-| `openFrontierRadius` | 20 | Open Frontier: explore this far (Chebyshev) from a settlement |
+| `openFrontierRadius` | 5 | Open Frontier: explore this far (Chebyshev) from a settlement |
+| `desertSurveyMax` | 1000 | Desert Survey: most desert tiles one exploration can reveal |
 
 ## Fog glimpses
 
@@ -55,12 +57,14 @@ Surveyor's Eye, Omen Reading, Ancient Sight, Blight Sight. Range = `base + step 
 | `siteMinDistance` | 3 | Ancient sites appear no closer than this to the start |
 | `siteChance` | 0.008 | Per-tile chance of an ancient site |
 | `featureChance` | 0.08 | Per-tile chance of a special feature |
-| `relicShare` | 0.08 | Fraction of special features that are relics (on tile types where a relic can appear) |
 | `landThreshold` | 0.40 | Elevation needed for land |
 | `ringLandChance` | 0.5 | Chance for land right around the start blob |
 | `desertThreshold` | 0.70 | Desert-noise level above which land becomes desert |
 | `mountainBelow` | 0.32 | Land noise below this is mountains |
 | `forestBelow` | 0.66 | Land noise below this (and above mountains) is forest; above is plains |
+| `templeMinDistance` | 600 | Every Ancient Temple tile is at least this far (Chebyshev) from the start |
+| `templeMaxDistance` | 800 | …and at most this far |
+| `ruinsChance` | 0.01 | Per-tile chance of Ruins on a land tile with no other feature or site |
 
 ## Special features
 
@@ -68,6 +72,8 @@ Surveyor's Eye, Omen Reading, Ancient Sight, Blight Sight. Range = `base + step 
 |---|---|---|
 | `tileFeatureAmount` | 2 | Bonus resource per turn on a claimed `tile` feature |
 | `allFeatureAmount` | 1 | Bonus of each resource per turn on a claimed all-resource feature |
+| `hiddenFeatureChance` | 0.06 | Per-tile chance of a hidden feature on a land tile with no other feature or site (new game) |
+| `hiddenFeatureAmount` | 2 | Bonus of each resource per turn on a claimed hidden feature, once Deep Wells is taken |
 
 ## Projects
 
@@ -76,18 +82,19 @@ Surveyor's Eye, Omen Reading, Ancient Sight, Blight Sight. Range = `base + step 
 | `projectBase` | 60 | Materials threshold for the first project |
 | `projectGrowth` | 1.4 | Threshold multiplier after each project |
 | `legacyPerDistance` | 0.05 | Site benefit scale increases by this × distance from start, per Legacy copy |
-| `tradeBonus` | 1 | Each of food/materials/wealth per Trade Empire copy per touching settlement |
+| `tradeBonus` | 2 | Trading Post: each of food/materials/wealth per bordering settlement |
+| `marketTownWeight` | 1.5 | Market Town: counts as this many settlements for a bordering Trading Post |
 | `gloriousBonus` | 3 | Per Glorious Capital copy, per other settlement within the radius |
 | `gloriousRadius` | 10 | Radius for Glorious Capital |
-| `relicYield` | 10 | Extra food, material and wealth from each claimed relic tile, with Relic Veneration |
+| `bountyOptions` | 1 | Bountiful Sites: extra location benefits offered per site, per copy |
 
 ## Ancient sites
 
 | Key | Default | Description |
 |---|---|---|
-| `siteOptionCount` | 3 | Benefits offered per site (plus the always-offered bundle) |
-| `siteBundleMin` | 8 | Bundle: each resource gets `min + rand * variance` (scaled by Legacy) |
-| `siteBundleVariance` | 8 | See above |
+| `siteOptionCount` | 1 | Location benefits offered per site (plus the always-offered bundle) |
+| `siteBundleMin` | 24 | Bundle: one random resource, `min + rand * variance` (scaled by Legacy) |
+| `siteBundleVariance` | 24 | See above |
 | `siteExploreRadius` | 4 | The 'explore' benefit reveals this radius around the site |
 | `siteFeatureCount` | 2 | The 'features' benefit adds this many features… |
 | `siteFeatureRadius` | 4 | …within this radius |
@@ -108,7 +115,7 @@ Surveyor's Eye, Omen Reading, Ancient Sight, Blight Sight. Range = `base + step 
 |---|---|---|
 | `winSettlements` | 20 | Settlements needed to win |
 | `winSites` | 20 | Ancient sites needed to win |
-| `winAscensions` | 10 | Times Ascension must be picked to win |
+| `winUpgrades` | 20 | Economic Dominion: upgraded settlements (still standing) needed to win |
 
 ## Other constants (not in `CV.CFG`)
 
@@ -137,33 +144,9 @@ Surveyor's Eye, Omen Reading, Ancient Sight, Blight Sight. Range = `base + step 
 | Sacred Grove | settlement | plains, forest | – |
 | Hot Springs | settlement | mountains, forest | – |
 | Natural Harbour | settlement | plains, desert, mountains | – |
-| Tidal Shrine | relic (blue) | ocean, plains | – |
-| Sunken Idol | relic (blue) | ocean, forest | – |
-| Standing Stones | relic (green) | forest, plains | – |
-| Founders’ Cairn | relic (green) | plains, mountains | – |
-| Obsidian Altar | relic (black) | mountains, desert | – |
-| Bone Garden | relic (black) | desert, forest | – |
+| Buried Aquifer | tile (hidden until Deep Wells) | plains, forest, mountains, desert | food, materials, wealth |
+| Ruins | ruins | plains, forest, mountains, desert | none; with Ruin Lore points toward the Ancient Temple |
 
 ### Projects (`CV.PROJECTS`)
 
-Each entry also has a `parent` id (`null` for roots); the tree itself is in `06-projects.md`.
-
-| Category | Project | Repeatable | Relic cost |
-|---|---|---|---|
-| Vision | Open Frontier | no | – |
-| Vision | Surveyor's Eye | yes | – |
-| Vision | Omen Reading | yes | – |
-| Vision | Ancient Sight | yes | – |
-| Vision | Seafaring | no | 1 blue |
-| Expansion | Harbour Founding | no | 1 green |
-| Expansion | Wider Borders | no | – |
-| Expansion | Legacy of Distance | yes | – |
-| Expansion | Trade Empire | yes | – |
-| Expansion | Glorious Capital | yes | 2 green |
-| Blight | Blight Sight | no | – |
-| Blight | Pustule Discernment | no | 1 black |
-| Blight | Rot Forecast | no | – |
-| Blight | Scavenge the Rot | no | 1 black |
-| Blight | Dwell in the Rot | no | 2 black |
-| Blight | Blight Fight | no | 1 black |
-| Blight | Pustule Burst | no | 2 black |
+Generated into `game/projects.js` from the tree in `06-projects.md` (names, parents, and repeatability all live there).

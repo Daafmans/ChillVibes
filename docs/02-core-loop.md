@@ -55,7 +55,7 @@
 ### Where to explore next?
 - Every pick reveals a 3×3 patch plus one extra tile per Survey Post, so your choice is *which direction* and *how deep*.
 - Wealth is spent on upgrades such as the Survey Post, so it competes with other uses of tiles. Plains, forests, mountains and ocean all give the same total yield but in different mixes (see `03-systems.md`), so a forest-heavy empire is rich in Materials but poor in Wealth.
-- Projects add **vision into the fog** (up to 5 tiles) of basic types, special features, ancient sites and blight. Each one lets you plan your exploration instead of picking blind.
+- Projects add **vision into the fog** (up to 15 tiles) of basic types, special features, ancient sites and blight. Each one lets you plan your exploration instead of picking blind.
 
 ### Where to expand next?
 - A settlement costs **Food**, is **instant**, and claims a **5×5 area minus corners (21 tiles)**.
