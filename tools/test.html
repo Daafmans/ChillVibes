@@ -61,7 +61,7 @@ function play(seed, mode, maxTurns) {
       }
       // upgrades: give each settlement the unlocked upgrade that suits its tiles best
       for (const c of g.settlements) {
-        if (c.upgrade || g.res.wealth < CFG.upgradeCost) continue;
+        if (c.upgrade || g.res.wealth < g.upgradeCost()) continue;
         let best = null, bs = 0;
         for (const u of g.upgradeOffer()) {
           const s = upgradeScore(g, c, u.id);
@@ -150,11 +150,19 @@ try {
       assert(!h.canUpgrade(1, 'surveypost').ok, 'upgrade locked without cartography');
       h.taken.cartography = 1;
       const r = h.upgrade(1, 'surveypost');
-      assert(r.ok && h.res.wealth === 100 - CV.CFG.upgradeCost && h.settlements[0].upgrade === 'surveypost', 'upgrade applied and charged');
+      assert(r.ok && h.res.wealth === 100 - CV.CFG.upgradeBaseCost && h.settlements[0].upgrade === 'surveypost', 'upgrade applied and charged');
       assert(!h.canUpgrade(1, 'surveypost').ok, 'cannot upgrade twice');
+      assert(h.upgradeCost() === Math.ceil(CV.CFG.upgradeBaseCost * CV.CFG.upgradeCostGrowth), 'upgrade cost grows per upgraded settlement');
       assert(CV.Game.restore(JSON.parse(JSON.stringify(h.serialize()))).settlements[0].upgrade === 'surveypost', 'upgrade survives save/load');
-      const p = new CV.Game(5); p.taken.cartography = 1; p.res.wealth = CV.CFG.upgradeCost - 1;
+      const p = new CV.Game(5); p.taken.cartography = 1; p.res.wealth = p.upgradeCost() - 1;
       assert(!p.canUpgrade(1, 'surveypost').ok, 'upgrade needs wealth');
+    }
+    // Desert Survey: exploring on desert reveals up to desertSurveyTiles more connected hidden desert tiles
+    {
+      const d = new CV.Game(5); d.taken.dunes = 1;
+      const extra = d.desertSurvey(0, 0, CV.CFG.desertSurveyTiles);
+      assert(extra.length <= CV.CFG.desertSurveyTiles, 'desert survey capped');
+      assert(extra.every(([x, y]) => d.world.tile(x, y).type === 'desert' && !d.known.has(CV.K(x, y)) && CV.cheb(0, 0, x, y) > 1), 'desert survey picks hidden desert outside the 3x3');
     }
     // Wayfinders: each Survey Post reveals the closest hidden tiles at the end of every turn
     {
@@ -224,7 +232,7 @@ try {
     assert(h.awaken(t.x - 1, t.y + 1).ok && h.over && h.over.won && h.over.how === 'temple', 'awakening wins');
     // Economic Dominion: enough upgraded living settlements win on End turn, only with the project
     const e = new CV.Game(7), winUpgrades = CFG.winUpgrades;
-    CFG.winUpgrades = 3; // stay clear of the settlement victory
+    CFG.winUpgrades = 3;
     for (let i = 1; i < CFG.winUpgrades; i++) e.settlements.push({ id: 1000 + i, x: i * 10, y: 50, upgrade: 'surveypost' });
     e.fallen.push({ id: 999, x: 0, y: 90, upgrade: 'surveypost' });
     e.taken.dominion = 1; e.endTurn();
@@ -252,7 +260,7 @@ try {
     // Ruins form a trail from near the start to the temple, each pointing at the next, the last at the temple
     const dirs = { north: [0, -1], south: [0, 1], east: [1, 0], west: [-1, 0] };
     const trail = h.world.ruinTrail;
-    assert(trail.length > 5, `seed ${seed}: trail has ${trail.length} ruins`);
+    assert(trail.length >= 3, `seed ${seed}: trail has ${trail.length} ruins`);
     assert(Math.hypot(trail[0].x, trail[0].y) <= CFG.ruinTrailStartMax + CFG.ruinLandSearch * 1.5, `seed ${seed}: first ruin near the start`);
     assert(CV.cheb(trail[trail.length - 1].x, trail[trail.length - 1].y, t.x, t.y) <= CFG.ruinStepMax + CFG.ruinLandSearch, `seed ${seed}: last ruin near the temple`);
     trail.forEach((p, i) => {

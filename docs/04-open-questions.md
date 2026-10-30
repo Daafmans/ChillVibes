@@ -7,13 +7,13 @@ Decisions made while building the vertical slice (`game/`). Everything here is c
 - Project threshold and settlement cost both grow multiplicatively.
 - Blight passes through any tile. Pustules spread one tile at a time, so no two sources compete for a tile.
 - Ancient sites offer two options: one random location benefit, and always a bundle of one resource.
-- Win targets are 20 settlements / 20 sites. The glimpsed state is always shown.
+- There is no victory for finding a number of sites (it was removed, as was the settlement-count victory). The glimpsed state is always shown.
 
 ## Assumptions I made (please confirm or correct)
 1. **Exploration is free and fixed.** Exploring reveals the 3×3 patch plus one extra tile per Survey Post upgrade (`surveyPostTiles`). Extras are hidden tiles touching the revealed area, nearest the picked tile first, ties broken by a seeded hash. Wealth is spent on settlement upgrades, not exploration.
 2. **One exploration per turn.** Founding settlements, projects and sites are unlimited per turn.
-3. **Projects spend Materials.** Taking one pays the current threshold, then the threshold grows ×1.4 (start 60). Every unlocked project in the tree is offered; children unlock when their parent is taken.
-4. **Settlement cost** = `ceil(40 * 1.45^(owned settlements - 1))` Food. Losing a settlement makes the next one cheaper.
+3. **Projects spend Materials.** Taking one pays the current threshold, then the threshold grows ×1.4 (start 80). Every unlocked project in the tree is offered; children unlock when their parent is taken.
+4. **Settlement cost** = `ceil(80 * 1.35^(owned settlements - 1))` Food. Losing a settlement makes the next one cheaper.
 5. **Ancient site offer** = 1 of the 4 location benefits (explore / two features / free settlement / cleanse) plus a bundle of one random resource. It is fixed per site, so it can't be rerolled. **Bountiful Sites** (repeatable) adds one more location benefit per copy (`bountyOptions`), so three copies offer all of them; after that it is no longer offered. The bundle is `24 + rand * 24` of that resource (scaled by Legacy).
 6. **Features:** Tile bonus = +2 of one resource on that tile, or +1 Food, Materials and Wealth on that tile for the all-resource features. The named features and the base tiles they can sit on are listed in `05-special-tiles.md`.
 7. **Legacy of Distance** multiplies site benefits (bundle size and bonus features) by `1 + 0.05 * stacks * distance`.
@@ -25,4 +25,4 @@ Decisions made while building the vertical slice (`game/`). Everything here is c
 
 ## Still open
 - **Glorious Capital and Trade Empire** make the economy grow roughly quadratically. Wealth accumulates until spent on upgrades, and only one upgrade per settlement exists, so it may pile up.
-- **Site density** is 0.8% of land tiles. "Find 20 sites" looks like the hard win; "20 settlements" looks the easiest.
+- **Site density** is 0.8% of land tiles, which limits how fast Ancient Rites can reach 20 awakenings.

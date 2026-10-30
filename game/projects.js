@@ -20,12 +20,12 @@
     {"id":"glorious","cat":"Projects","name":"Glorious Capital","parent":"surveyor","multi":true,"desc":"The oldest settlement produces three extra wealth, material and food for each other settlement within 10 tiles."},
     {"id":"trade","cat":"Projects","name":"Trade Empire","parent":"glorious","multi":false,"desc":"Unlocks the Trading Post settlement upgrade: the upgraded settlement produces two extra wealth, materials and food for each other settlement whose claimed tiles border its own (diagonals don't count)"},
     {"id":"guilds","cat":"Projects","name":"Merchant Guilds","parent":"trade","multi":false,"desc":"Unlocks the Market Town settlement upgrade: it does nothing on its own, but counts as 1.5 settlements for every Trading Post it borders."},
-    {"id":"dominion","cat":"Projects","name":"Economic Dominion","parent":"guilds","multi":false,"desc":"Once 20 living settlements have an upgrade, you claim an economic victory (checked at the end of the turn)."},
+    {"id":"dominion","cat":"Projects","name":"Economic Dominion","parent":"guilds","multi":false,"desc":"Once 12 living settlements have an upgrade, you claim an economic victory (checked at the end of the turn)."},
     {"id":"blightsight","cat":"Projects","name":"Blight Sight","parent":"surveyor","multi":true,"desc":"See blight up to 1 tile into the fog"},
     {"id":"scavenge","cat":"Projects","name":"Scavenge the Rot","parent":"blightsight","multi":false,"desc":"Unlocks the Scavenger settlement upgrade: every blighted tile claimed by the upgraded settlement yields 1 food, 1 material and 1 wealth (features stay disabled)"},
     {"id":"dwell","cat":"Projects","name":"Dwell in the Rot","parent":"scavenge","multi":false,"desc":"Destroyed Scavenger settlements keep producing from their blighted tiles (1 food, 1 material and 1 wealth each); their other tiles stay idle. They still count as lost for the win and lose conditions"},
     {"id":"discernment","cat":"Projects","name":"Pustule Discernment","parent":"blightsight","multi":false,"desc":"Tell pustules apart from ordinary blight"},
-    {"id":"dunes","cat":"Projects","name":"Desert Survey","parent":"surveyor","multi":false,"desc":"Exploring directly on a desert tile instantly explores the entire connected desert"},
+    {"id":"dunes","cat":"Projects","name":"Desert Survey","parent":"surveyor","multi":false,"desc":"Exploring directly on a desert tile also explores up to 5 more connected desert tiles"},
     {"id":"irrigation","cat":"Projects","name":"Irrigation","parent":"dunes","multi":false,"desc":"Unlocks the Desert Bloom settlement upgrade: every desert tile claimed by the upgraded settlement yields 1 food, 1 material and 1 wealth."},
     {"id":"wells","cat":"Projects","name":"Deep Wells","parent":"irrigation","multi":false,"desc":"Reveals Buried Aquifers: previously hidden special features on land tiles that each yield 2 food, 2 materials and 2 wealth."}
   );

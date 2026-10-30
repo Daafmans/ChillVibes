@@ -165,8 +165,9 @@
     // ---------- upgrades ----------
     upgradeOffer() { return CV.UPGRADES.filter(u => this.taken[u.project]); }
     upgradeCount(id) { return this.settlements.filter(c => c.upgrade === id).length; }
+    upgradeCost() { return Math.ceil(CFG.upgradeBaseCost * Math.pow(CFG.upgradeCostGrowth, this.settlements.filter(c => c.upgrade).length)); }
     canUpgrade(sid, uid) {
-      const cost = CFG.upgradeCost, c = this.settlements.find(s => s.id === sid);
+      const cost = this.upgradeCost(), c = this.settlements.find(s => s.id === sid);
       if (this.over) return { ok: false, cost, reason: 'Game over' };
       if (!c) return { ok: false, cost, reason: 'No settlement here' };
       if (c.upgrade) return { ok: false, cost, reason: 'Already upgraded' };
@@ -236,16 +237,19 @@
         for (const [tx, ty] of this.nearestHidden(c.x, c.y, CFG.wayfinderTiles)) this.reveal(tx, ty);
       }
     }
-    // Desert Survey: every desert tile 8-connected to (x, y), capped for safety.
-    desertRegion(x, y) {
-      const seen = new Set([K(x, y)]), out = [[x, y]];
-      for (let i = 0; i < out.length && out.length < CFG.desertSurveyMax; i++) {
-        const [cx, cy] = out[i];
+    // Desert Survey: the n hidden desert tiles nearest (x, y) through 8-connected desert, outside the 3x3 that
+    // exploring reveals anyway. The search visits at most 1000 tiles.
+    desertSurvey(x, y, n) {
+      const seen = new Set([K(x, y)]), queue = [[x, y]], out = [];
+      for (let i = 0; i < queue.length && queue.length < 1000 && out.length < n; i++) {
+        const [cx, cy] = queue[i];
         for (const [dx, dy] of N8) {
           const tx = cx + dx, ty = cy + dy, k = K(tx, ty);
           if (seen.has(k)) continue;
           seen.add(k);
-          if (this.world.tile(tx, ty).type === 'desert') out.push([tx, ty]);
+          if (this.world.tile(tx, ty).type !== 'desert') continue;
+          queue.push([tx, ty]);
+          if (!this.known.has(k) && cheb(x, y, tx, ty) > 1 && out.length < n) out.push([tx, ty]);
         }
       }
       return out;
@@ -272,7 +276,7 @@
       this.exploredThisTurn = true;
       const tiles = this.extraTiles(x, y, c.bonus);
       for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) tiles.push([x + dx, y + dy]);
-      if (this.taken.dunes && this.world.tile(x, y).type === 'desert') tiles.push(...this.desertRegion(x, y));
+      if (this.taken.dunes && this.world.tile(x, y).type === 'desert') tiles.push(...this.desertSurvey(x, y, CFG.desertSurveyTiles));
       const found = { temple: false, site: false, feature: false };
       for (const [tx, ty] of tiles) {
         const k = K(tx, ty);
@@ -323,9 +327,10 @@
       }
       return out;
     }
-    // Per-turn yield of one living settlement: its tiles plus trade and capital bonuses.
+    // Per-turn yield of one living settlement: a flat base, its tiles, plus trade and capital bonuses.
     settlementYield(c) {
-      const tot = { food: 0, materials: 0, wealth: 0 };
+      const b = CFG.settlementBaseYield;
+      const tot = { food: b, materials: b, wealth: b };
       const trade = c.upgrade === 'tradingpost', neighbours = new Set();
       for (const t of this.settlementTiles.get(c.id) || []) {
         const y = this.tileYield(t.x, t.y);
@@ -539,8 +544,6 @@
     }
     checkWin() {
       const p = this.progress();
-      if (p.settlements >= CFG.winSettlements) return 'settlements';
-      if (p.sites >= CFG.winSites) return 'sites';
       // Economic Dominion: upgraded settlements still standing (fallen ones don't count)
       if (this.taken.dominion && p.upgrades >= CFG.winUpgrades) return 'economy';
       if (this.taken.rites && p.awakened >= CFG.winAwakened) return 'awakened';

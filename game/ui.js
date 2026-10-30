@@ -61,8 +61,6 @@
       `<span class="grow"></span>` +
       `<button data-act="options" title="Tweak gameplay values">Options</button>` +
       `<button data-act="newgame" title="Abandon this world and start a new one">New game</button>` +
-      `<span class="pill dim">Settlements <b>${p.settlements}/${CFG.winSettlements}</b></span>` +
-      `<span class="pill dim">Sites <b>${p.sites}/${CFG.winSites}</b></span>` +
       (g.taken.dominion ? `<span class="pill dim">Upgraded <b>${p.upgrades}/${CFG.winUpgrades}</b></span>` : '') +
       (g.taken.rites ? `<span class="pill dim">Awakened <b>${p.awakened}/${CFG.winAwakened}</b></span>` : '') +
       `<span class="pill dim">\u{1F3DB}️ Temple <b>${g.templeFound() ? 'found' : 'not found'}</b></span>` +
@@ -173,6 +171,7 @@
     const offered = new Set(g.projectOffer().map(p => p.id));
     const kids = id => PROJECTS.filter(p => p.parent === id);
     const esc = s => s.replace(/"/g, '&quot;');
+    const WINS = new Set(['rites', 'awakening', 'dominion']); // projects that unlock a victory
     const node = p => {
       const n = g.taken[p.id] || 0, isOffered = offered.has(p.id);
       const state = isOffered ? 'open' : n ? 'done' : 'locked';
@@ -180,7 +179,7 @@
       const kind = up ? 'k-upgrade' : p.multi ? 'k-multi' : 'k-once';
       const tip = `${p.desc}${p.multi ? ' (repeatable)' : ''}`;
       const sub = up ? `${up.icon} settlement upgrade` : p.multi ? '↻ repeatable' : '';
-      const body = `<div class="t">${p.name}${n ? `<span class="dim"> ${n > 1 ? '×' + n : '✓'}</span>` : ''}</div>` +
+      const body = `<div class="t">${WINS.has(p.id) ? '🏆 ' : ''}${p.name}${n ? `<span class="dim"> ${n > 1 ? '×' + n : '✓'}</span>` : ''}</div>` +
         `${sub ? `<div class="sub">${sub}</div>` : ''}`;
       const cls = `pnode ${state} ${kind}`;
       const inner = isOffered
@@ -194,7 +193,6 @@
     const trees = cats.map(c => `<section class="ptree"><h4>${c}</h4>${roots.filter(p => p.cat === c).map(node).join('')}</section>`).join('');
     openModal(`<div class="sheet"><h3>Choose a project</h3>
       <div class="dim">Costs ${ICON.materials}${g.threshold}. Projects change the rules of the game. Hover a project for details.</div>
-      <div class="plegend"><span class="k-once">One-time</span><span class="k-multi">↻ Repeatable</span><span class="k-upgrade">Unlocks a settlement upgrade</span></div>
       <div class="ptrees">${trees}</div><div class="btns"><button data-act="close">Later</button></div></div>`, 'projects');
   }
 
@@ -228,8 +226,8 @@
   const OPTION_GROUPS = [
     ['Start', ['startFood', 'startMaterials', 'startWealth']],
     ['Settlements', ['settlementBaseCost', 'settlementCostGrowth', 'settlementClaimRadius']],
-    ['Upgrades', ['upgradeCost', 'surveyPostTiles', 'wayfinderTiles','shrineKeeperRadius', 'relicSiteMaterials', 'relicRuinsWealth']],
-    ['Exploring', ['openFrontierRadius']],
+    ['Upgrades', ['upgradeBaseCost', 'upgradeCostGrowth', 'surveyPostTiles', 'wayfinderTiles','shrineKeeperRadius', 'relicSiteMaterials', 'relicRuinsWealth']],
+    ['Exploring', ['openFrontierRadius', 'desertSurveyTiles']],
     ['Fog glimpses', ['glimpseBase', 'glimpseStep', 'glimpseMax']],
     ['World generation (new game)', ['blobMin', 'blobVariance', 'blobFillChance', 'startSafeRadius', 'siteMinDistance',
       'siteChance', 'featureChance','landThreshold', 'ringLandChance', 'desertThreshold', 'mountainBelow', 'forestBelow',
@@ -239,7 +237,7 @@
     ['Ancient sites', ['siteOptionCount', 'siteBundleMin', 'siteBundleVariance',
       'siteExploreRadius', 'siteFeatureCount', 'siteFeatureRadius', 'cleanseRadius']],
     ['Blight', ['blightStart', 'blightEvery', 'blightSpawnRange', 'blightSpread']],
-    ['Victory', ['winSettlements', 'winSites', 'winUpgrades', 'winAwakened']],
+    ['Victory', ['winUpgrades', 'winAwakened']],
   ];
   const WORLD_KEYS = new Set(OPTION_GROUPS.find(([t]) => t.startsWith('World generation'))[1]);
   const optLabel = k => cap(k.replace(/([A-Z])/g, ' $1').toLowerCase());
@@ -293,7 +291,7 @@
 
   function showOver() {
     const o = g.over;
-    const how = { settlements: 'built enough settlements', sites: 'found enough ancient sites', temple: 'awakened the gods at the Ancient Temple', economy: 'upgraded enough settlements for an economic victory', awakened: 'awakened enough ancient sites' };
+    const how = { temple: 'awakened the gods at the Ancient Temple', economy: 'upgraded enough settlements for an economic victory', awakened: 'awakened enough ancient sites' };
     openModal(`<div class="sheet"><h3>${o.won ? 'You win' : 'The blight took your last settlement'}</h3>
       <div>${o.won ? `On turn ${o.turn} you ${how[o.how]}.` : `You lasted until turn ${o.turn}.`}</div>
       <div class="btns"><button class="primary" data-act="restart">New world</button></div></div>`, 'over');

@@ -46,11 +46,11 @@ Each line is one project. **Indentation is the tree**: a project is a child of t
   - glorious | Glorious Capital | The oldest settlement produces three extra wealth, material and food for each other settlement within 10 tiles. | yes
     - trade | Trade Empire | Unlocks the Trading Post settlement upgrade: the upgraded settlement produces two extra wealth, materials and food for each other settlement whose claimed tiles border its own (diagonals don't count) | no
       - guilds | Merchant Guilds | Unlocks the Market Town settlement upgrade: it does nothing on its own, but counts as 1.5 settlements for every Trading Post it borders. | no
-        - dominion | Economic Dominion | Once 20 living settlements have an upgrade, you claim an economic victory (checked at the end of the turn). | no
+        - dominion | Economic Dominion | Once 12 living settlements have an upgrade, you claim an economic victory (checked at the end of the turn). | no
   - blightsight | Blight Sight | See blight up to 1 tile into the fog | yes
     - scavenge | Scavenge the Rot | Unlocks the Scavenger settlement upgrade: every blighted tile claimed by the upgraded settlement yields 1 food, 1 material and 1 wealth (features stay disabled) | no
       - dwell | Dwell in the Rot | Destroyed Scavenger settlements keep producing from their blighted tiles (1 food, 1 material and 1 wealth each); their other tiles stay idle. They still count as lost for the win and lose conditions | no
     - discernment | Pustule Discernment | Tell pustules apart from ordinary blight | no
-  - dunes | Desert Survey | Exploring directly on a desert tile instantly explores the entire connected desert | no
+  - dunes | Desert Survey | Exploring directly on a desert tile also explores up to 5 more connected desert tiles | no
     - irrigation | Irrigation | Unlocks the Desert Bloom settlement upgrade: every desert tile claimed by the upgraded settlement yields 1 food, 1 material and 1 wealth. | no
       - wells | Deep Wells | Reveals Buried Aquifers: previously hidden special features on land tiles that each yield 2 food, 2 materials and 2 wealth. | no

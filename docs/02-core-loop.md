@@ -26,11 +26,11 @@
    ├─► Materials buy PROJECTS (rule changes: see 03-systems.md)
    └─► Wealth UPGRADES settlements (once each)
 
- Pressure: BLIGHT spreads from turn 10 on and eats settlements.
+ Pressure: BLIGHT spreads from turn 8 on and eats settlements.
 ```
 
 ## A turn
-1. **Income.** Every settlement produces resources from all its claimed tiles into global stocks.
+1. **Income.** Every settlement produces a flat 3 of each resource plus the yields of all its claimed tiles into global stocks.
 2. **Player actions.** Within resource limits, any of:
    - **Gain a project** when materials limit is reached.
    - **Explore** one tile (the main action; see below).
@@ -71,7 +71,7 @@
 ## Tension curve
 | Turns | Feel |
 |---|---|
-| 1-9 | Calm. Learn the map, found first settlements, begin on projects. |
-| 10+ | The first pustule appears. Clock starts. |
-| 20, 30, ... | A new pustule every 10 turns while the old ones keep spreading. |
+| 1-7 | Calm. Learn the map, found first settlements, begin on projects. |
+| 8+ | The first pustule appears. Clock starts. |
+| 14, 20, 26, ... | A new pustule every 6 turns while the old ones keep spreading. |
 | End | Win by reaching a goal, or lose when every settlement is blighted. |

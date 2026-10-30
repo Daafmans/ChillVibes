@@ -17,7 +17,7 @@ All resources are **stored and spent globally**, not per settlement.
 | **Materials** | Projects                                            |
 | **Wealth**    | Settlement upgrades                                 |
 
-- Every turn, each settlement adds the yields of **all its claimed tiles**.
+- Every turn, each settlement produces a flat **3 food, 3 materials and 3 wealth** (`settlementBaseYield`), plus the yields of **all its claimed tiles**.
 - **Desert** yields nothing.
 - **Plains, forests, mountains and ocean** have the **same total yield (2) with different mixes**. Base yields are kept low so that special features stand out.
   - Plains: 1 food, 1 wealth
@@ -37,11 +37,11 @@ The full list (which base tiles each feature can appear on, its name and its bon
 - **Footprint:** 5×5 square minus the four corners = **21 tiles**.
 - **Claiming:** a tile can belong to **one settlement only**, permanently, even after the settlement is destroyed by blight.
 - **Placement rules:** not on claimed tiles, not on pustules or blight, not on water (until a project allows it).
-- **Production:** each turn, each settlement yields the sum of its claimed tiles.
+- **Production:** each turn, each settlement yields `settlementBaseYield` (3) of each resource plus the sum of its claimed tiles.
 - **Destruction:** if the settlement's own tile turns to blight, the settlement is destroyed. It keeps its claimed tiles (no new settlement can take them) and is shown as a charred village, but it produces nothing, gives no trade bonus, and no longer counts as a settlement. Only a Scavenger with *Dwell in the Rot* keeps yielding, from its blighted tiles.
 - A **free settlement** can come from an ancient site.
 - **Exploration**: Claimed tiles are automatically and instantly explored
-- **Upgrade:** each settlement can be upgraded **once**, for **Wealth** (`upgradeCost`). The upgrades on offer are the ones unlocked by projects taken so far (see `06-projects.md`). Upgrades:
+- **Upgrade:** each settlement can be upgraded **once**, for **Wealth** (`upgradeBaseCost`, growing by `upgradeCostGrowth` per settlement already upgraded). The upgrades on offer are the ones unlocked by projects taken so far (see `06-projects.md`). Upgrades:
   - **Survey Post** (unlocked by *Cartography*): every exploration reveals 1 extra tile per settlement with this upgrade. With *Wayfinders* (child of *Cartography*), each Survey Post also reveals the 2 hidden tiles closest to it (`wayfinderTiles`, Euclidean, ties broken by the map seed) at the end of every turn.
   - **Shrine Keeper** (unlocked by *Pilgrimage*): every ancient site within 10 tiles (`shrineKeeperRadius`) of this settlement can be activated one additional time. Shrine Keepers stack: a site in range of two gets two extra activations.
   - **Desert Bloom** (unlocked by *Irrigation*): every desert tile claimed by the settlement yields 1 food, 1 material and 1 wealth (instead of nothing). Special features on the tile still add their bonus; blighted tiles still follow the blight rules.
@@ -57,8 +57,6 @@ Benefits:
 - Two special features added to some nearby tiles
 - A free settlement on the site tile
 - **Cleanse:** eliminate all blight, including pustules, within **30 tiles** of the site
-
-Ancient sites are also a **win-condition target** (find a specific number).
 
 ## 6. Projects
 Spent with Materials: each time the threshold is reached, the player picks any unlocked project from the project tree. Projects change how the game is played rather than adding percentages. The rules and the project tree live in `06-projects.md`.
@@ -80,18 +78,16 @@ Why it works:
 
 ## 8. Win and loss
 **Win** by any one of:
-- Have **X settlements**
-- Find **Y ancient sites**
 - **Awaken the gods** at the Ancient Temple (see below)
-- **Economic victory**: with *Economic Dominion* (child of *Merchant Guilds*) taken, have **20** upgraded settlements (`winUpgrades`). Only settlements still standing count (not ones destroyed by blight, even with *Dwell in the Rot*); upgrades bought before the project count. Checked on End turn like the other counted goals.
+- **Economic victory**: with *Economic Dominion* (child of *Merchant Guilds*) taken, have **12** upgraded settlements (`winUpgrades`). Only settlements still standing count (not ones destroyed by blight, even with *Dwell in the Rot*); upgrades bought before the project count. Checked on End turn like the other counted goals.
 - **Awakened sites**: with *Ancient Rites* (child of *Legacy of Distance*) taken, every ancient site activation offers **Awaken** besides its usual benefits. Awakening gives nothing else, but after **20** awakenings (`winAwakened`) you win. Each activation counts, so a site with extra activations from Shrine Keepers can be awakened more than once. Checked on End turn.
 
 **Lose** when **all your settlements** are turned to blight.
 
-X and Y are configurable per game (difficulty setting).
+The targets are configurable per game (difficulty setting).
 
 ### Ancient Temple (exploration victory)
-- At world creation one **3×3 Ancient Temple** is placed so that every tile of it is **600–800 tiles** (Chebyshev, `templeMinDistance`..`templeMaxDistance`) from the start. Its tiles are plain land with no feature or site.
+- At world creation one **3×3 Ancient Temple** is placed so that every tile of it is **80–120 tiles** (Chebyshev, `templeMinDistance`..`templeMaxDistance`) from the start. Its tiles are plain land with no feature or site.
 - Exploring (revealing) **any** temple tile instantly reveals all nine.
 - **Ruins** (a special feature, see `05-special-tiles.md`) form a single **messy trail** from near the start to the temple. The first ruin lies 6–12 tiles from the start in any direction (`ruinTrailStartMin`..`ruinTrailStartMax`); each next one is 15–30 tiles further (`ruinStepMin`..`ruinStepMax`), heading for the temple but turning up to `ruinWander` radians either way. A point that falls in the sea moves to the nearest land within `ruinLandSearch` tiles, or is skipped. On their own ruins do nothing.
 - *Ruin Lore* (child of *Cartography*) makes every Ruins tile show the **cardinal direction** (north, south, east or west) toward the **next ruin** of the trail, and the last ruin toward the temple: along whichever axis the target is further away on.

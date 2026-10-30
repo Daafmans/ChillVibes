@@ -6,18 +6,19 @@
     startFood: 0, startMaterials: 0, startWealth: 0,
 
     // --- Settlements ---
-    settlementBaseCost: 40, settlementCostGrowth: 1.45,       // food; cost = ceil(base * growth^(settlements-1))
+    settlementBaseCost: 80, settlementCostGrowth: 1.35,       // food; cost = ceil(base * growth^(settlements-1))
     settlementClaimRadius: 2,                           // border radius: the square of this radius minus its four corners
+    settlementBaseYield: 3,                             // each of food/materials/wealth every living settlement produces per turn on top of its tiles
 
     // --- Upgrades ---
-    upgradeCost: 30,                              // wealth; a settlement can be upgraded once
+    upgradeBaseCost: 40, upgradeCostGrowth: 1.45,  // wealth; cost = ceil(base * growth^(upgraded settlements)); a settlement can be upgraded once
     shrineKeeperRadius: 10,                       // Shrine Keeper: ancient sites within this Chebyshev distance gets one extra activation per Shrine Keeper in range
     surveyPostTiles: 1,                           // Survey Post: extra tiles revealed by each exploration, per upgraded settlement
     relicSiteMaterials: 2, relicRuinsWealth: 2,   // Relic Restoration: per claimed ancient site / ruins tile of an Artisan Quarter
 
     // --- Exploring ---
     openFrontierRadius: 5,                        // Open Frontier: explore this far (Chebyshev) from a settlement
-    desertSurveyMax: 1000,                        // Desert Survey: most desert tiles one exploration can reveal
+    desertSurveyTiles: 5,                         // Desert Survey: extra hidden desert tiles revealed when exploring on a desert tile
     wayfinderTiles: 2,                            // Wayfinders: hidden tiles each Survey Post reveals per turn (closest first)
     wayfinderMaxRadius: 30,                       // Wayfinders: furthest (Chebyshev) a Survey Post looks for hidden tiles
 
@@ -33,7 +34,7 @@
     landThreshold: 0.40, ringLandChance: 0.5,     // elevation needed for land; chance for land right around the start blob
     desertThreshold: 0.70,                        // desert-noise level above which land becomes desert
     mountainBelow: 0.32, forestBelow: 0.66,       // land noise bands: mountains < forest < plains
-    templeMinDistance: 600, templeMaxDistance: 800, // every Ancient Temple tile lies this far (Chebyshev) from the start
+    templeMinDistance: 80, templeMaxDistance: 120, // every Ancient Temple tile lies this far (Chebyshev) from the start
     ruinTrailStartMin: 6, ruinTrailStartMax: 12,  // the first ruin of the trail lies this far (straight line) from the start
     ruinStepMin: 15, ruinStepMax: 30,             // distance from each ruin to the next
     ruinWander: 1.0,                              // radians each step may turn away from the temple's direction
@@ -46,7 +47,7 @@
     hiddenFeatureAmount: 2,                       // bonus of each resource per turn on a claimed hidden feature (once Deep Wells is taken)
 
     // --- Projects ---
-    projectBase: 60, projectGrowth: 1.4,          // materials threshold, multiplied by growth after each project
+    projectBase: 80, projectGrowth: 1.4,          // materials threshold, multiplied by growth after each project
     legacyPerDistance: 0.05,                      // site benefit scale += this * distance from start, per Legacy copy
     tradeBonus: 2,                                // Trading Post: each of food/materials/wealth per bordering settlement
     marketTownWeight: 1.5,                        // Market Town: counts as this many settlements for a bordering Trading Post
@@ -61,13 +62,12 @@
     cleanseRadius: 30,                            // 'cleanse' benefit removes blight within this radius
 
     // --- Blight ---
-    blightStart: 10, blightEvery: 10,             // first pustule on this turn, then every N turns
+    blightStart: 8, blightEvery: 6,               // first pustule on this turn, then every N turns
     blightSpawnRange: 15,                         // pustules appear on undiscovered tiles up to this far (Chebyshev) from known land; effectively capped by glimpseMax
     blightSpread: 3,                             // tiles gained per pustule per turn
 
     // --- Victory ---
-    winSettlements: 20, winSites: 20,
-    winUpgrades: 20,                              // Economic Dominion: upgraded settlements (still standing) needed to win
+    winUpgrades: 12,                              // Economic Dominion: upgraded settlements (still standing) needed to win
     winAwakened: 20,                              // Ancient Rites: ancient site awakenings needed to win
   };
   CV.CFG_DEFAULTS = Object.freeze(Object.assign({}, CV.CFG));
@@ -112,7 +112,7 @@
     ocean: { food: 2 },
     desert: {},
   };
-  // Settlement upgrades. A settlement can take one, once, for CFG.upgradeCost wealth; each is offered only once its project is taken.
+  // Settlement upgrades. A settlement can take one, once, for upgradeCost() wealth; each is offered only once its project is taken.
   CV.UPGRADES = [
     { id: 'surveypost', name: 'Survey Post', project: 'cartography', icon: '\u{1F52D}',
       get desc() { return `Each exploration reveals ${CV.CFG.surveyPostTiles} extra tile${CV.CFG.surveyPostTiles === 1 ? '' : 's'} per settlement with this upgrade.`; } },

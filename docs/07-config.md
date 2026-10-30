@@ -14,15 +14,17 @@ All tunable gameplay numbers live in `CV.CFG` in `game/config.js`. Every value i
 
 | Key | Default | Description |
 |---|---|---|
-| `settlementBaseCost` | 40 | Food cost of a settlement; `cost = ceil(base * growth^(settlements-1))` |
-| `settlementCostGrowth` | 1.45 | Cost multiplier per existing settlement |
+| `settlementBaseCost` | 80 | Food cost of a settlement; `cost = ceil(base * growth^(settlements-1))` |
+| `settlementCostGrowth` | 1.35 | Cost multiplier per existing settlement |
 | `settlementClaimRadius` | 2 | Border radius: settlements claim the square of this radius minus its four corners (21 tiles at 2) |
+| `settlementBaseYield` | 3 | Each of food/materials/wealth every living settlement produces per turn on top of its tiles |
 
 ## Upgrades
 
 | Key | Default | Description |
 |---|---|---|
-| `upgradeCost` | 30 | Wealth cost of a settlement upgrade (once per settlement) |
+| `upgradeBaseCost` | 40 | Wealth cost of a settlement upgrade (once per settlement); `cost = ceil(base * growth^(upgraded settlements))` |
+| `upgradeCostGrowth` | 1.45 | Cost multiplier per already-upgraded settlement |
 | `surveyPostTiles` | 1 | Survey Post: extra tiles revealed by each exploration, per upgraded settlement |
 | `wayfinderTiles` | 2 | Wayfinders: hidden tiles each Survey Post reveals per turn (closest first) |
 | `wayfinderMaxRadius` | 30 | Wayfinders: furthest (Chebyshev) a Survey Post looks for hidden tiles |
@@ -35,7 +37,7 @@ All tunable gameplay numbers live in `CV.CFG` in `game/config.js`. Every value i
 | Key | Default | Description |
 |---|---|---|
 | `openFrontierRadius` | 5 | Open Frontier: explore this far (Chebyshev) from a settlement |
-| `desertSurveyMax` | 1000 | Desert Survey: most desert tiles one exploration can reveal |
+| `desertSurveyTiles` | 5 | Desert Survey: extra hidden desert tiles (nearest, connected) revealed when exploring on a desert tile |
 
 ## Fog glimpses
 
@@ -63,8 +65,8 @@ Surveyor's Eye, Omen Reading, Ancient Sight, Blight Sight. Range = `base + step 
 | `desertThreshold` | 0.70 | Desert-noise level above which land becomes desert |
 | `mountainBelow` | 0.32 | Land noise below this is mountains |
 | `forestBelow` | 0.66 | Land noise below this (and above mountains) is forest; above is plains |
-| `templeMinDistance` | 600 | Every Ancient Temple tile is at least this far (Chebyshev) from the start |
-| `templeMaxDistance` | 800 | …and at most this far |
+| `templeMinDistance` | 80 | Every Ancient Temple tile is at least this far (Chebyshev) from the start |
+| `templeMaxDistance` | 120 | …and at most this far |
 | `ruinTrailStartMin` | 6 | The first ruin of the trail lies at least this far (straight line) from the start |
 | `ruinTrailStartMax` | 12 | …and at most this far |
 | `ruinStepMin` | 15 | Shortest distance from one trail ruin to the next |
@@ -85,7 +87,7 @@ Surveyor's Eye, Omen Reading, Ancient Sight, Blight Sight. Range = `base + step 
 
 | Key | Default | Description |
 |---|---|---|
-| `projectBase` | 60 | Materials threshold for the first project |
+| `projectBase` | 80 | Materials threshold for the first project |
 | `projectGrowth` | 1.4 | Threshold multiplier after each project |
 | `legacyPerDistance` | 0.05 | Site benefit scale increases by this × distance from start, per Legacy copy |
 | `tradeBonus` | 2 | Trading Post: each of food/materials/wealth per bordering settlement |
@@ -110,8 +112,8 @@ Surveyor's Eye, Omen Reading, Ancient Sight, Blight Sight. Range = `base + step 
 
 | Key | Default | Description |
 |---|---|---|
-| `blightStart` | 10 | Turn of the first pustule |
-| `blightEvery` | 10 | A new pustule every N turns |
+| `blightStart` | 8 | Turn of the first pustule |
+| `blightEvery` | 6 | A new pustule every N turns |
 | `blightSpawnRange` | 15 | Pustules appear on undiscovered tiles up to this many tiles (Chebyshev) from known land; effectively capped by `glimpseMax` |
 | `blightSpread` | 3 | Tiles gained per pustule per turn |
 
@@ -119,9 +121,7 @@ Surveyor's Eye, Omen Reading, Ancient Sight, Blight Sight. Range = `base + step 
 
 | Key | Default | Description |
 |---|---|---|
-| `winSettlements` | 20 | Settlements needed to win |
-| `winSites` | 20 | Ancient sites needed to win |
-| `winUpgrades` | 20 | Economic Dominion: upgraded settlements (still standing) needed to win |
+| `winUpgrades` | 12 | Economic Dominion: upgraded settlements (still standing) needed to win |
 | `winAwakened` | 20 | Ancient Rites: ancient site awakenings needed to win |
 
 ## Other constants (not in `CV.CFG`)
